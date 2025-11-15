@@ -1,27 +1,71 @@
-html {
+﻿html {
   font-size: 14px;
 }
 nav {
-    background-color: #808080;
-    color: white;
+    background-color: #F6EEE2;
+    color: #302D27;
+}
+.nav-link  {
+    color: #302D27;
+    font-family:  'Lucida Grande'
+}
+.nav-link:hover {
+    color: #78AB9D;
+}
+
+/* ✅ Custom checkbox color styling */
+input[type="checkbox"]:checked {
+    background-color: #5E3E55;
+    accent-color: #BDAD9E; /* Bootstrap primary blue */
+}
+
+/* Optional: Add hover or focus effects for accessibility */
+input[type="checkbox"]:hover {
+    cursor: pointer;
+}
+
+input[type="checkbox"]:focus {
+    outline: 2px solid #80bdff;
+    outline-offset: 2px;
+}
+#adminDropdown {
+    color: #302D27
+}
+
+#adminDropdown:hover {
+    color: #78AB9D
 }
 #introBlock,
 #introBlock .card-body {
-    
-    background-color: #006101;
+    background-color: #78AB9D;
     color: white;
+    font-family:'Lucida Calligraphy';
     font-weight: 600;
-/*    display: block;
+    /*    display: block;
     width: 100%;
     height: 100%;
     padding: 1rem;*/
-   
 }
 #introBlock h4 {
     color: black;
     font-weight: bold;
-    padding: 15px
+    padding: 15px;
+    
 
+}
+body {
+    background-color: #EFF0F0
+}
+.btn {
+    background-color: #BDAD9E;
+    border-color: #5E3E55
+}
+.btn:hover {
+    background-color: #5E3E55
+}
+
+.card {
+    background-color: #FAFAFA
 }
 .citedVerse {
     margin: 15px;
@@ -47,4 +91,8 @@ html {
 
 body {
   margin-bottom: 60px;
+}
+
+.list-group .list-group-item {
+    background-color: #FAFAFA;
 }

@@ -10,20 +10,23 @@
 </head>
 <body>
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm border-bottom box-shadow mb-3">
+        <nav class="navbar navbar-expand-lg custom-navbar border-bottom box-shadow mb-3">
             <div class="container">
                 <a class="navbar-brand" href="https://www.stmark-wels.org/" target="_blank" rel="noopener noreferrer">
                     <img src="~/images/logos/st.mark_logo.png" alt="St. Mark" />
                 </a>
 
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
+                <!-- Mobile toggle button-->
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar">                        
                     <span class="navbar-toggler-icon"></span>
                 </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
+
+
+                <div class="collapse navbar-collapse" id="mainNavbar">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
                         <li class="nav-item">
-                            <a class="nav-link text-light" asp-area="" asp-page="/Index">Stewardship Survey</a>
+                            <a class="nav-link" asp-page="/Index">Stewardship Survey</a>
                         </li>
                         @* <li class="nav-item">
                             <a class="nav-link text-light" asp-area="" asp-page="/Privacy">Privacy</a>
@@ -31,21 +34,12 @@
                         @if (User.IsInRole("Admin"))
                         {
                             <li class="nav-item dropdown">
-								<a class="nav-link dropdown-toggle text-light"href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Admin Areas</a>
-								<ul class="dropdown-menu" aria-labelledby="adminDropdown">
-                                    <li class="nav-item">
-                                        <a class="dropdown-item" asp-area="" asp-page="/Admin">Admin</a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="dropdown-item" asp-area="" asp-page="/Admin/UserRoles">User Roles</a>
-							        </li>
-                                    <li class="nav-item">
-                                        <a class="dropdown-item" asp-area="" asp-page="/Admin/InvolvementAreas">Involvement Areas</a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="dropdown-item" asp-area="" asp-page="/Admin/InterestAreas">Interest Areas</a>
-                                    </li>
-
+								<a class="nav-link dropdown-toggle "href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown">Admin Areas</a>
+								<ul class="dropdown-menu" >
+                                    <li><a class="dropdown-item"  asp-page="/Admin">Admin</a></li>
+                                    <li><a class="dropdown-item" asp-page="/Admin/UserRoles">User Roles</a></li>
+                                    <li><a class="dropdown-item" asp-page="/Admin/InvolvementAreas">Involvement Areas</a></li>
+                                    <li><a class="dropdown-item" asp-page="/Admin/InterestAreas">Interest Areas</a></li>
                                 </ul>
                             </li>
 
@@ -55,20 +49,20 @@
                         {
 
                             <li class="nav-item">
-                                @* <a class="nav-link text-dark" asp-area="" asp-page="/MemberInfo">MemberInfo</a> *@
+                                @* <a class="nav-link " asp-area="" asp-page="/MemberInfo">MemberInfo</a> *@
                             </li>
                         }
                         
                         @if (User.IsInRole("VolunteerOrganizer"))
                         {
                             <li class="nav-item">
-                                @* <a class="nav-link text-dark" asp-area="" asp-page="/MemberInfo">MemberInfo</a> *@
+                                @* <a class="nav-link " asp-area="" asp-page="/MemberInfo">MemberInfo</a> *@
                             </li>
                         }
                         @if (User.IsInRole("RegisteredUser"))
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-light" asp-area="" asp-page="/Members/MemberInfo">MemberInfo</a>
+                                <a class="nav-link" asp-page="/Members/MemberInfo">MemberInfo</a>
                             </li>
 						}                       
                         

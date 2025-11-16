@@ -63,6 +63,7 @@ nav {
     cursor: help;
 }
 
+
 /* Inputs & focus */
 input, select, textarea {
     font-size: 1.05rem;
@@ -81,6 +82,17 @@ input[type="checkbox"] {
     input[type="checkbox"]:hover {
         cursor: pointer;
     }
+
+/* ------------------------------
+    CARD DEFAULTS
+------------------------------ */
+.card {
+    background-color: #FAFAFA;
+}
+
+.list-group-item {
+    background-color: #FAFAFA;
+}
 
 /* ------------------------------
     SCRIPTURE BLOCK
@@ -103,16 +115,7 @@ input[type="checkbox"] {
     font-size: 0.9rem;
 }
 
-/* ------------------------------
-    CARD DEFAULTS
------------------------------- */
-/*.card {
-    background-color: #FAFAFA;
-}*/
 
-.list-group-item {
-    background-color: #FAFAFA;
-}
 
 /* ------------------------------
     CHECKBOX TILE (large & tap-friendly)

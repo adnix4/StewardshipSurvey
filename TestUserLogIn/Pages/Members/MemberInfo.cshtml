@@ -5,7 +5,7 @@
 }
 
 
-<div class="card shadow-sm mb-4" id="introBlock">
+<div class="card shadow-sm scripture-card mb-4">
     <div class="card-body">
         <h5>
             For you created my inner organs. You wove me together in my mother's womb.
@@ -36,7 +36,7 @@
 
 @if (!ViewData.ModelState.IsValid)
 {
-    <div class="alert alert-danger">
+    <div class="alert alert-danger" id="validationSummary">
         <strong>Please correct the following errors:</strong>
         <ul class="mb-0">
             @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
@@ -46,13 +46,6 @@
         </ul>
     </div>
 }
-<style>
-    .required-asterisk {
-        color: red;
-        cursor: help;
-        margin-left: 2px;
-    }
-</style>
 
 <div class="card shadow-sm">
     <div class="card-body">
@@ -61,94 +54,86 @@
             <p class="text-muted mb-4"><span class="text-danger">*</span> Indicates required fields.</p>
 
             <!-- Name -->
-            <div class="row mb-3">
+            <div class="row g-3 mb-3">
                 <div class="col-md-6">
-                    <label asp-for="MemberDetails.FirstName" class="form-label">
-                        First Name
-                        <span class="required-asterisk" title="This field is required">*</span>
-                    </label>
+                    <label asp-for="MemberDetails.FirstName" class="form-label required-label"></label>
                     <input asp-for="MemberDetails.FirstName" class="form-control" required />
                     <span asp-validation-for="MemberDetails.FirstName" class="text-danger"></span>
                 </div>
+
                 <div class="col-md-6">
-                    <label asp-for="MemberDetails.LastName" class="form-label">
-                        Last Name
-                        <span class="required-asterisk" title="This field is required">*</span>
-                    </label>
+                    <label asp-for="MemberDetails.LastName" class="form-label required-label"></label>
                     <input asp-for="MemberDetails.LastName" class="form-control" required />
                     <span asp-validation-for="MemberDetails.LastName" class="text-danger"></span>
                 </div>
             </div>
 
             <!-- Email -->
-            <div class="mb-3">
+            <div class="row g-3 mb-3">
                 <div class="col-md-6">
-                    <label asp-for="MemberDetails.Email" class="form-label fw-semibold">
-                        Email Address <span class="required-asterisk" title="Enter a valid email address">*</span>
-                    </label>
+                    <label asp-for="MemberDetails.Email" class="form-label required-label"></label>
                     <input asp-for="MemberDetails.Email" type="email" class="form-control" required />
                     <span asp-validation-for="MemberDetails.Email" class="text-danger"></span>
-				</div>
+                </div>
 
                 <div class="col-md-6">
-                    <label asp-for="MemberDetails.PreferredContactEmail" class="form-label fw-semibold">
-                        Preferred Contact Email
-                    </label>
+                    <label asp-for="MemberDetails.PreferredContactEmail" class="form-label"></label>
                     <input asp-for="MemberDetails.PreferredContactEmail" type="email" class="form-control" />
-                    <div class="form-text">Optional — use if different from your login email.</div>
+                    <div class="form-text">Optional — if different from login email.</div>
                 </div>
             </div>
 
-            <!-- Phone -->
-            <div class="row mb-3">
+            <!-- Phones -->
+            <div class="row g-3 mb-3">
                 <div class="col-md-6">
                     <label asp-for="MemberDetails.CellPhoneNumber" class="form-label"></label>
-                    <input asp-for="MemberDetails.CellPhoneNumber" class="form-control" pattern="^\+?\d{7,15}$" />
+                    <input asp-for="MemberDetails.CellPhoneNumber" class="form-control" />
                     <span asp-validation-for="MemberDetails.CellPhoneNumber" class="text-danger"></span>
                 </div>
+
                 <div class="col-md-6">
                     <label asp-for="MemberDetails.HomePhoneNumber" class="form-label"></label>
-                    <input asp-for="MemberDetails.HomePhoneNumber" class="form-control" pattern="^\+?\d{7,15}$" />
+                    <input asp-for="MemberDetails.HomePhoneNumber" class="form-control" />
                     <span asp-validation-for="MemberDetails.HomePhoneNumber" class="text-danger"></span>
                 </div>
             </div>
 
             <!-- Address -->
             <div class="mb-3">
-                <label asp-for="MemberDetails.Address" class="form-label">Address</label>
+                <label asp-for="MemberDetails.Address" class="form-label"></label>
                 <input asp-for="MemberDetails.Address" class="form-control" />
             </div>
 
-            <!-- City / State / Zip -->
-            <div class="row mb-3">
+            <div class="row g-3 mb-3">
                 <div class="col-md-4">
-                    <label asp-for="MemberDetails.City" class="form-label">City</label>
+                    <label asp-for="MemberDetails.City" class="form-label"></label>
                     <input asp-for="MemberDetails.City" class="form-control" />
                 </div>
+
                 <div class="col-md-4">
-                    <label asp-for="MemberDetails.State" class="form-label">State</label>
+                    <label asp-for="MemberDetails.State" class="form-label"></label>
                     <input asp-for="MemberDetails.State" class="form-control" />
                 </div>
+
                 <div class="col-md-4">
-                    <label asp-for="MemberDetails.Zip" class="form-label">Zip Code</label>
+                    <label asp-for="MemberDetails.Zip" class="form-label"></label>
                     <input asp-for="MemberDetails.Zip" class="form-control" />
                 </div>
             </div>
 
-            <!-- Birthdate / Sex -->
-            <div class="row mb-3">
+            <!-- Birthdate & Gender -->
+            <div class="row g-3 mb-3">
                 <div class="col-md-6">
                     <label asp-for="MemberDetails.BirthDate" class="form-label"></label>
                     <input asp-for="MemberDetails.BirthDate" type="date" class="form-control" max="@DateTime.Today.ToString("yyyy-MM-dd")" />
-                    <span asp-validation-for="MemberDetails.BirthDate" class="text-danger"></span>
                 </div>
+
                 <div class="col-md-6">
-                    <label asp-for="MemberDetails.Sex" class="form-label">Gender</label>
+                    <label asp-for="MemberDetails.Sex" class="form-label"></label>
                     <select asp-for="MemberDetails.Sex" class="form-select">
                         <option value="">-- Select --</option>
                         <option>Male</option>
                         <option>Female</option>
-                        
                     </select>
                 </div>
             </div>
@@ -156,61 +141,63 @@
             <!-- Contact Preferences -->
             <div class="mb-3">
                 <label class="form-label fw-semibold">Preferred Contact Methods</label>
-                <div class="form-check">
-                    <input class="form-check-input" asp-for="MemberDetails.PrefersPhone" type="checkbox" id="prefPhone" />
-                    <label class="form-check-label" for="prefPhone">Phone Call</label>
+
+                <div class="check-tile @(Model.MemberDetails.PrefersPhone ? "selected" : "")">
+                    <input asp-for="MemberDetails.PrefersPhone" type="checkbox" class="form-check-input" />
+                    <label class="form-check-label">Phone Call</label>
                 </div>
-                <div class="form-check">
-                    <input class="form-check-input" asp-for="MemberDetails.PrefersText" type="checkbox" id="prefText" />
-                    <label class="form-check-label" for="prefText">Text Message</label>
+
+                <div class="check-tile @(Model.MemberDetails.PrefersText ? "selected" : "")">
+                    <input asp-for="MemberDetails.PrefersText" type="checkbox" class="form-check-input" />
+                    <label class="form-check-label">Text Message</label>
                 </div>
-                <div class="form-check">
-                    <input class="form-check-input" asp-for="MemberDetails.PrefersEmail" type="checkbox" id="prefEmail" />
-                    <label class="form-check-label" for="prefEmail">Email</label>
+
+                <div class="check-tile @(Model.MemberDetails.PrefersEmail ? "selected" : "")">
+                    <input asp-for="MemberDetails.PrefersEmail" type="checkbox" class="form-check-input" />
+                    <label class="form-check-label">Email</label>
                 </div>
             </div>
 
             <!-- Comments -->
             <div class="mb-3">
-                <label asp-for="MemberDetails.Comments" class="form-label">Comments</label>
+                <label asp-for="MemberDetails.Comments" class="form-label"></label>
                 <textarea asp-for="MemberDetails.Comments" class="form-control" rows="3"></textarea>
             </div>
 
-            <button type="submit" class="btn btn-primary">
+            <!-- Submit -->
+            <button type="submit" class="btn btn-primary w-100 py-2 mt-3">
                 <i class="bi bi-save"></i> Select Interests
             </button>
-        </form>
-    </div>
-</div>
 
-<!-- Bootstrap Toast for Validation -->
-<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
-    <div id="validationToast" class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="d-flex">
-            <div class="toast-body fw-semibold">
-                ⚠️ Please fill out all required fields before continuing.
-            </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-        </div>
+        </form>
     </div>
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+
     <script>
+        // Clickable tile behavior
+        document.querySelectorAll('.check-tile').forEach(tile => {
+            tile.addEventListener('click', () => {
+                const checkbox = tile.querySelector('input[type="checkbox"]');
+                checkbox.checked = !checkbox.checked;
+                tile.classList.toggle('selected', checkbox.checked);
+            });
+        });
+
+        // Toast validation
         document.getElementById('memberForm').addEventListener('submit', function (event) {
             const form = event.target;
+
             if (!form.checkValidity()) {
                 event.preventDefault();
                 event.stopPropagation();
+                form.classList.add('was-validated');
 
-                // Show Bootstrap toast
                 const toast = new bootstrap.Toast(document.getElementById('validationToast'));
                 toast.show();
-
-                // Add Bootstrap validation styling
-                form.classList.add('was-validated');
             }
-        }, false);
+        });
     </script>
 }

@@ -1,50 +1,172 @@
+﻿/* ------------------------------
+    GLOBAL & TYPOGRAPHY
+------------------------------ */
 html {
-  font-size: 14px;
-}
-nav {
-    background-color: #808080;
-    color: white;
-}
-#introBlock,
-#introBlock .card-body {
-    
-    background-color: #006101;
-    color: white;
-    font-weight: 600;
-/*    display: block;
-    width: 100%;
-    height: 100%;
-    padding: 1rem;*/
-   
-}
-#introBlock h4 {
-    color: black;
-    font-weight: bold;
-    padding: 15px
-
-}
-.citedVerse {
-    margin: 15px;
-    font-style: italic;
-    font-size: .9em;
-    text-align: right;
-}
-
-@media (min-width: 768px) {
-  html {
     font-size: 16px;
-  }
-}
-
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
-html {
-  position: relative;
-  min-height: 100%;
 }
 
 body {
-  margin-bottom: 60px;
+    background-color: #EFF0F0;
+    margin-bottom: 60px;
+}
+
+/* Buttons */
+button.btn,
+.btn {
+    padding: 12px 20px;
+    font-size: 1.15rem;
+    border-radius: 8px;
+    background-color: #BDAD9E;
+    border-color: #5E3E55;
+    color: #302D27;
+}
+
+    button.btn:hover,
+    .btn:hover {
+        background-color: #5E3E55;
+        color: white;
+    }
+
+/* ------------------------------
+    NAVBAR
+------------------------------ */
+nav {
+    background-color: #F6EEE2;
+    color: #302D27;
+}
+
+.nav-link {
+    color: #302D27;
+    font-family: "Lucida Grande";
+}
+
+    .nav-link:hover {
+        color: #78AB9D;
+    }
+
+#adminDropdown {
+    color: #302D27;
+}
+
+    #adminDropdown:hover {
+        color: #78AB9D;
+    }
+
+/* ------------------------------
+    FORM ELEMENTS & VALIDATION
+------------------------------ */
+.required-asterisk,
+.required-label::after {
+    content: " *";
+    color: red;
+    font-weight: bold;
+    cursor: help;
+}
+
+
+/* Inputs & focus */
+input, select, textarea {
+    font-size: 1.05rem;
+}
+
+.form-label {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+/* Custom checkbox color (accent-color supported in modern browsers) */
+input[type="checkbox"] {
+    accent-color: #5E3E55;
+}
+
+    input[type="checkbox"]:hover {
+        cursor: pointer;
+    }
+
+/* ------------------------------
+    CARD DEFAULTS
+------------------------------ */
+.card {
+    background-color: #FAFAFA;
+}
+
+.list-group-item {
+    background-color: #FAFAFA;
+}
+
+/* ------------------------------
+    SCRIPTURE BLOCK
+------------------------------ */
+#introBlock,
+#introBlock .card-body,
+.scripture-card {
+    background-color: #78AB9D;
+    color: white;
+    font-family: "Lucida Calligraphy";
+    font-weight: 600;
+   
+    padding: 1rem;
+}
+
+.citedVerse {
+    margin-top: 10px;
+    text-align: right;
+    font-style: italic;
+    font-size: 0.9rem;
+}
+
+
+
+/* ------------------------------
+    CHECKBOX TILE (large & tap-friendly)
+------------------------------ */
+.check-tile {
+    border: 2px solid #ccc;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s ease;
+    background-color: white;
+}
+
+    .check-tile:hover {
+        border-color: #5E3E55;
+        background: #F3E7DE; /* light warm highlight */
+    }
+
+    .check-tile.selected {
+        border-color: #5E3E55;
+        background-color: #E6D9D0;
+    }
+
+    .check-tile .form-check-input {
+        transform: scale(1.3);
+        margin-right: 12px;
+    }
+
+/* ------------------------------
+    MOBILE RESPONSIVENESS
+------------------------------ */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 0.8rem;
+    }
+
+    input, select, textarea {
+        font-size: 1.15rem;
+    }
+
+    .check-tile {
+        padding: 16px;
+    }
+}
+
+/* Full-width buttons on very small screens */
+@media (max-width: 500px) {
+    button.btn {
+        width: 100%;
+    }
 }

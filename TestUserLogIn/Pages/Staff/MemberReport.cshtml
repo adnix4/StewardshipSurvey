@@ -1,0 +1,374 @@
+﻿@* @page
+@model TestUserLogIn.Pages.Staff.MemberReportModel
+@{
+    ViewData["Title"] = "Member Report";
+}
+
+<h2 class="mb-4">Member Report</h2>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <form method="get" class="d-flex gap-2">
+                    <input type="text" 
+                           name="searchTerm" 
+                           class="form-control" 
+                           placeholder="Search by name, email, or phone..." 
+                           value="@Model.SearchTerm" />
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </form>
+            </div>
+            <div class="col-md-6 text-end">
+                <a asp-route-handler="export" 
+                   asp-route-searchTerm="@Model.SearchTerm" 
+                   class="btn btn-secondary">
+                    <i class="bi bi-download"></i> Export
+                </a>
+            </div>
+        </div>
+
+        @if (!Model.Members.Any())
+        {
+            <div class="alert alert-info">No members found.</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>
+                                <a asp-route-sortColumn="FirstName" 
+                                   asp-route-searchTerm="@Model.SearchTerm"
+                                   style="cursor: pointer; text-decoration: none; color: inherit;">
+                                    Name 
+                                    @if (Model.SortColumn == "FirstName")
+                                    {
+                                        @if (Model.SortAscending) { <span>↑</span> } else { <span>↓</span> }
+                                    }
+                                </a>
+                            </th>
+                            <th>
+                                <a asp-route-sortColumn="Email" 
+                                   asp-route-searchTerm="@Model.SearchTerm"
+                                   style="cursor: pointer; text-decoration: none; color: inherit;">
+                                    Email
+                                    @if (Model.SortColumn == "Email")
+                                    {
+                                        @if (Model.SortAscending) { <span>↑</span> } else { <span>↓</span> }
+                                    }
+                                </a>
+                            </th>
+                            <th>
+                                <a asp-route-sortColumn="Phone" 
+                                   asp-route-searchTerm="@Model.SearchTerm"
+                                   style="cursor: pointer; text-decoration: none; color: inherit;">
+                                    Phone
+                                    @if (Model.SortColumn == "Phone")
+                                    {
+                                        @if (Model.SortAscending) { <span>↑</span> } else { <span>↓</span> }
+                                    }
+                                </a>
+                            </th>
+                            <th>Service Roles</th>
+                            <th>Interests</th>
+                            <th>Involvement Areas</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var member in Model.Members)
+                        {
+                            <tr>
+                                <td>@($"{member.FirstName} {member.LastName}")</td>
+                                <td>@member.Email</td>
+                                <td>@member.CellPhoneNumber</td>
+                                <td>
+                                    @if (member.MemberServiceRoles?.Any() == true)
+                                    {
+                                        <ul class="mb-0 ps-3">
+                                            @foreach (var role in member.MemberServiceRoles)
+                                            {
+                                                <li>@role.InvolvementArea?.AreaOfInvolvement</li>
+                                            }
+                                        </ul>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">None</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (member.MemberInterests?.Any() == true)
+                                    {
+                                        <ul class="mb-0 ps-3">
+                                            @foreach (var interest in member.MemberInterests)
+                                            {
+                                                <li>@interest.InterestArea?.InterestArea</li>
+                                            }
+                                        </ul>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">None</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (member.MemberInvolvements?.Any() == true)
+                                    {
+                                        <ul class="mb-0 ps-3">
+                                            @foreach (var involvement in member.MemberInvolvements)
+                                            {
+                                                <li>@involvement.InvolvementArea?.AreaOfInvolvement</li>
+                                            }
+                                        </ul>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">None</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (member.IsActive)
+                                    {
+                                        <span class="badge bg-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">Inactive</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div> *@
+@page
+@model TestUserLogIn.Pages.Staff.MemberReportModel
+@{
+    ViewData["Title"] = "Member Report";
+}
+
+<h2 class="mb-4">Member Report</h2>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <h4 class="card-title mb-3">Search & Filter</h4>
+        
+        <form method="get" class="mb-4">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Search by Name, Email, or Phone</label>
+                    <input type="text" 
+                           name="searchTerm" 
+                           class="form-control" 
+                           placeholder="Enter search term..." 
+                           value="@Model.SearchTerm" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">Search</button>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label class="form-label">Service Roles</label>
+                    <select name="serviceRoles" class="form-select" multiple size="5">
+                        @foreach (var role in Model.ServiceRoles)
+                        {
+                            <option value="@role.InvolvementAreaID" 
+                                    selected="@Model.SelectedServiceRoles.Contains(role.InvolvementAreaID)">
+                                @role.AreaOfInvolvement
+                            </option>
+                        }
+                    </select>
+                    <small class="text-muted">Hold Ctrl to select multiple</small>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Interests</label>
+                    <select name="interests" class="form-select" multiple size="5">
+                        @foreach (var interest in Model.Interests)
+                        {
+                            <option value="@interest.InterestAreaID" 
+                                    selected="@Model.SelectedInterests.Contains(interest.InterestAreaID)">
+                                @interest.InterestArea
+                            </option>
+                        }
+                    </select>
+                    <small class="text-muted">Hold Ctrl to select multiple</small>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Involvement Areas</label>
+                    <select name="involvementAreas" class="form-select" multiple size="5">
+                        @foreach (var involvement in Model.InvolvementAreas)
+                        {
+                            <option value="@involvement.InvolvementAreaID" 
+                                    selected="@Model.SelectedInvolvementAreas.Contains(involvement.InvolvementAreaID)">
+                                @involvement.AreaOfInvolvement
+                            </option>
+                        }
+                    </select>
+                    <small class="text-muted">Hold Ctrl to select multiple</small>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary me-2">Apply Filters</button>
+                    <a asp-page="MemberReport" class="btn btn-secondary">Clear Filters</a>
+                </div>
+            </div>
+        </form>
+
+        <hr />
+
+        <div class="row mb-3">
+            <div class="col-12">
+                <a asp-page-handler="export" 
+                   asp-route-searchTerm="@Model.SearchTerm"
+                   asp-route-serviceRoles="@string.Join(",", Model.SelectedServiceRoles)"
+                   asp-route-interests="@string.Join(",", Model.SelectedInterests)"
+                   asp-route-involvementAreas="@string.Join(",", Model.SelectedInvolvementAreas)"
+                   class="btn btn-success">
+                    <i class="bi bi-download"></i> Export CSV
+                </a>
+            </div>
+        </div>
+
+        @if (!Model.Members.Any())
+        {
+            <div class="alert alert-info">No members found matching your criteria.</div>
+        }
+        else
+        {
+            <p class="text-muted">Found @Model.Members.Count member(s)</p>
+            
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>
+                                <a asp-route-sortColumn="FirstName" 
+                                   asp-route-searchTerm="@Model.SearchTerm"
+                                   asp-route-serviceRoles="@string.Join(",", Model.SelectedServiceRoles)"
+                                   asp-route-interests="@string.Join(",", Model.SelectedInterests)"
+                                   asp-route-involvementAreas="@string.Join(",", Model.SelectedInvolvementAreas)"
+                                   style="cursor: pointer; text-decoration: none; color: inherit;">
+                                    Name 
+                                    @if (Model.SortColumn == "FirstName")
+                                    {
+                                        @if (Model.SortAscending) { <span>↑</span> } else { <span>↓</span> }
+                                    }
+                                </a>
+                            </th>
+                            <th>
+                                <a asp-route-sortColumn="Email" 
+                                   asp-route-searchTerm="@Model.SearchTerm"
+                                   asp-route-serviceRoles="@string.Join(",", Model.SelectedServiceRoles)"
+                                   asp-route-interests="@string.Join(",", Model.SelectedInterests)"
+                                   asp-route-involvementAreas="@string.Join(",", Model.SelectedInvolvementAreas)"
+                                   style="cursor: pointer; text-decoration: none; color: inherit;">
+                                    Email
+                                    @if (Model.SortColumn == "Email")
+                                    {
+                                        @if (Model.SortAscending) { <span>↑</span> } else { <span>↓</span> }
+                                    }
+                                </a>
+                            </th>
+                            <th>
+                                <a asp-route-sortColumn="Phone" 
+                                   asp-route-searchTerm="@Model.SearchTerm"
+                                   asp-route-serviceRoles="@string.Join(",", Model.SelectedServiceRoles)"
+                                   asp-route-interests="@string.Join(",", Model.SelectedInterests)"
+                                   asp-route-involvementAreas="@string.Join(",", Model.SelectedInvolvementAreas)"
+                                   style="cursor: pointer; text-decoration: none; color: inherit;">
+                                    Phone
+                                    @if (Model.SortColumn == "Phone")
+                                    {
+                                        @if (Model.SortAscending) { <span>↑</span> } else { <span>↓</span> }
+                                    }
+                                </a>
+                            </th>
+                            <th>Service Roles</th>
+                            <th>Interests</th>
+                            <th>Involvement Areas</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var member in Model.Members)
+                        {
+                            <tr>
+                                <td><strong>@($"{member.FirstName} {member.LastName}")</strong></td>
+                                <td>@member.Email</td>
+                                <td>@member.CellPhoneNumber</td>
+                                <td>
+                                    @if (member.MemberServiceRoles?.Any() == true)
+                                    {
+                                        <ul class="mb-0 ps-3">
+                                            @foreach (var role in member.MemberServiceRoles)
+                                            {
+                                                <li>@role.InvolvementArea?.AreaOfInvolvement</li>
+                                            }
+                                        </ul>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">None</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (member.MemberInterests?.Any() == true)
+                                    {
+                                        <ul class="mb-0 ps-3">
+                                            @foreach (var interest in member.MemberInterests)
+                                            {
+                                                <li>@interest.InterestArea?.InterestArea</li>
+                                            }
+                                        </ul>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">None</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (member.MemberInvolvements?.Any() == true)
+                                    {
+                                        <ul class="mb-0 ps-3">
+                                            @foreach (var involvement in member.MemberInvolvements)
+                                            {
+                                                <li>@involvement.InvolvementArea?.AreaOfInvolvement</li>
+                                            }
+                                        </ul>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">None</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (member.IsActive)
+                                    {
+                                        <span class="badge bg-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">Inactive</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

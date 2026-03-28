@@ -25,7 +25,6 @@
 
   <ItemGroup>
     <Folder Include="Pages\VolunteerOrganizer\" />
-    <Folder Include="Pages\Staff\" />
   </ItemGroup>
 
 </Project>

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using TestUserLogIn.Data;
 using TestUserLogIn.Models;
+using TestUserLogIn.Models.DTOs;
 
 namespace TestUserLogIn.Pages.Members
 {
@@ -13,55 +14,111 @@ namespace TestUserLogIn.Pages.Members
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
-        public SelectMemberServiceRolesModel(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        private readonly ILogger<SelectMemberServiceRolesModel> _logger;
+
+        public SelectMemberServiceRolesModel(ApplicationDbContext context, UserManager<ApplicationUser> userManager, ILogger<SelectMemberServiceRolesModel> logger)
         {
             _context = context;
             _userManager = userManager;
+            _logger = logger;
         }
-        public List<InvolvementAreas> AllInvolvements { get; set; } = new();
+
+        public List<InvolvementAreaDto> AllInvolvements { get; set; } = new();
         [BindProperty]
         public List<int> SelectedInvolvementIds { get; set; } = new();
+
         public async Task<IActionResult> OnGetAsync()
         {
-            AllInvolvements = await _context.InvolvementAreas
-                .Where(i => i.IsActive)
-                .OrderBy(i => i.AreaOfInvolvement)
-                .ToListAsync();
-            // Load member’s current selections
-            var user = await _userManager.GetUserAsync(User);
-            if (user?.MemberID != null)
+            try
             {
-                SelectedInvolvementIds = await _context.MemberServiceRoles
-                    .Where(mi => mi.MemberID == user.MemberID)
-                    .Select(mi => mi.InvolvementAreaID)
+                _logger.LogInformation("Loading SelectMemberServiceRoles page");
+                
+                // Get current user
+                var user = await _userManager.GetUserAsync(User);
+                if (user?.MemberID == null)
+                {
+                    _logger.LogError("User not found or has no MemberID");
+                    return Unauthorized();
+                }
+
+                _logger.LogInformation($"Loading service roles for user {user.Email} (MemberID: {user.MemberID})");
+
+                // Load all service roles from database
+                AllInvolvements = await _context.InvolvementAreas
+                    .Where(ia => ia.IsActive)
+                    .OrderBy(ia => ia.AreaOfInvolvement)
+                    .Select(ia => new InvolvementAreaDto
+                    {
+                        InvolvementAreaID = ia.InvolvementAreaID,
+                        AreaOfInvolvement = ia.AreaOfInvolvement,
+                        Description = ia.Description,
+                        IsActive = ia.IsActive
+                    })
                     .ToListAsync();
+
+                _logger.LogInformation($"Loaded {AllInvolvements.Count} service roles");
+
+                // Load current user's selections from database
+                SelectedInvolvementIds = await _context.MemberServiceRoles
+                    .Where(msr => msr.MemberID == user.MemberID.Value)
+                    .Select(msr => msr.InvolvementAreaID)
+                    .ToListAsync();
+
+                _logger.LogInformation($"User has {SelectedInvolvementIds.Count} previously selected service roles");
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error loading service roles: {ex.Message}");
+            }
+
             return Page();
         }
+
         public async Task<IActionResult> OnPostAsync()
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user?.MemberID == null)
-                return Unauthorized();
-
-            int memberId = user.MemberID.Value;
-
-            // Remove existing involvements
-            var existing = _context.MemberServiceRoles.Where(mi => mi.MemberID == memberId);
-            _context.MemberServiceRoles.RemoveRange(existing);
-
-            // Add new selections
-            foreach (var involvementId in SelectedInvolvementIds)
+            try
             {
-                _context.MemberServiceRoles.Add(new MemberServiceRole
+                var user = await _userManager.GetUserAsync(User);
+                if (user?.MemberID == null)
                 {
-                    MemberID = memberId,
-                    InvolvementAreaID = involvementId,
-                    CreatedDate = DateTime.UtcNow
-                });
+                    _logger.LogError("User not found or has no MemberID");
+                    return Unauthorized();
+                }
+
+                int memberId = user.MemberID.Value;
+
+                _logger.LogInformation($"Saving {SelectedInvolvementIds.Count} service roles for user {user.Email}");
+
+                // Remove existing service roles
+                var existing = _context.MemberServiceRoles.Where(msr => msr.MemberID == memberId);
+                _context.MemberServiceRoles.RemoveRange(existing);
+
+                // Add new selections
+                foreach (var involvementId in SelectedInvolvementIds)
+                {
+                    _context.MemberServiceRoles.Add(new MemberServiceRole
+                    {
+                        MemberID = memberId,
+                        InvolvementAreaID = involvementId,
+                        CreatedDate = DateTime.UtcNow
+                    });
+                    _logger.LogInformation($"Added service role {involvementId}");
+                }
+
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Service roles saved successfully to database");
+
+                return RedirectToPage("/Members/MemberInfo");
             }
-            await _context.SaveChangesAsync();
-            return RedirectToPage("/Members/MemberInfo");
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error saving service roles: {ex.Message}");
+                ModelState.AddModelError("", "An error occurred while saving your selections.");
+            }
+
+            // Reload data on error
+            await OnGetAsync();
+            return Page();
         }
     }
 }

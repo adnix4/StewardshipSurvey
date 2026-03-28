@@ -32,6 +32,9 @@ namespace TestUserLogIn.Pages
         [BindProperty]
         public MemberInfo MemberDetails { get; set; } = new();
 
+        [BindProperty]
+        public string PreferredContact { get; set; } = string.Empty;
+
         public IList<string> Roles { get; set; } = new List<string>();
 
         public async Task<IActionResult> OnGetAsync()
@@ -50,6 +53,16 @@ namespace TestUserLogIn.Pages
             if (memberInfo != null)
             {
                 MemberDetails = memberInfo;
+                
+                // Set the preferred contact based on the stored boolean values
+                if (MemberDetails.PrefersPhone)
+                    PreferredContact = "Phone";
+                else if (MemberDetails.PrefersText)
+                    PreferredContact = "Text";
+                else if (MemberDetails.PrefersEmail)
+                    PreferredContact = "Email";
+                
+                _logger.LogInformation($"Loaded existing member with PreferredContact: {PreferredContact}");
             }
             else
             {
@@ -63,6 +76,8 @@ namespace TestUserLogIn.Pages
                     CreatedDate = DateTime.UtcNow,
                     IsActive = true
                 };
+                
+                _logger.LogInformation("Created new member info");
             }
 
             return Page();
@@ -81,6 +96,33 @@ namespace TestUserLogIn.Pages
 
             try
             {
+                _logger.LogInformation($"OnPost: PreferredContact value = '{PreferredContact}'");
+                
+                // Reset all contact preferences
+                MemberDetails.PrefersPhone = false;
+                MemberDetails.PrefersEmail = false;
+                MemberDetails.PrefersText = false;
+
+                // Set the appropriate preference based on the radio button selection
+                switch (PreferredContact)
+                {
+                    case "Phone":
+                        MemberDetails.PrefersPhone = true;
+                        _logger.LogInformation("Set PrefersPhone = true");
+                        break;
+                    case "Text":
+                        MemberDetails.PrefersText = true;
+                        _logger.LogInformation("Set PrefersText = true");
+                        break;
+                    case "Email":
+                        MemberDetails.PrefersEmail = true;
+                        _logger.LogInformation("Set PrefersEmail = true");
+                        break;
+                    default:
+                        _logger.LogWarning($"Unknown PreferredContact value: '{PreferredContact}'");
+                        break;
+                }
+
                 var existing = await _context.MemberInfos
                     .FirstOrDefaultAsync(m => m.ApplicationUser.Id == user.Id);
 
@@ -116,7 +158,8 @@ namespace TestUserLogIn.Pages
                     existing.UpdatedDate = DateTime.UtcNow;
 
                     _context.MemberInfos.Update(existing);
-                    _logger.LogInformation("Updated MemberInfo for {User}", user.UserName);
+                    _logger.LogInformation("Updated MemberInfo for {User} - Phone: {Phone}, Text: {Text}, Email: {Email}", 
+                        user.UserName, existing.PrefersPhone, existing.PrefersText, existing.PrefersEmail);
                 }
 
                 await _context.SaveChangesAsync();
@@ -126,7 +169,7 @@ namespace TestUserLogIn.Pages
 
                 _logger.LogInformation("MemberInfo saved successfully for {User}", user.UserName);
 
-                return RedirectToPage("/Members/SelectInterests"); //  redirect to SelectedIntersts
+                return RedirectToPage("/Members/SelectInterests");
             }
             catch (Exception ex)
             {
@@ -137,4 +180,3 @@ namespace TestUserLogIn.Pages
         }
     }
 }
-

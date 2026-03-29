@@ -64,8 +64,8 @@ namespace TestUserLogIn.Pages.Staff
                 .OrderBy(ia => ia.AreaOfInvolvement)
                 .ToListAsync();
 
-            // Get members with related data
-            var query = _context.MemberInfos
+            // Get members with related data - use IQueryable, not IIncludableQueryable
+            IQueryable<MemberInfo> query = _context.MemberInfos
                 .Where(m => m.IsActive)
                 .Include(m => m.MemberServiceRoles)
                 .ThenInclude(msr => msr.InvolvementArea)
@@ -77,7 +77,7 @@ namespace TestUserLogIn.Pages.Staff
             // Apply search filter
             if (!string.IsNullOrEmpty(searchTerm))
             {
-                query = (Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<MemberInfo, InvolvementAreas?>)query.Where(m =>
+                query = query.Where(m =>
                     m.FirstName.Contains(searchTerm) ||
                     m.LastName.Contains(searchTerm) ||
                     m.Email.Contains(searchTerm) ||
@@ -87,21 +87,21 @@ namespace TestUserLogIn.Pages.Staff
             // Apply service roles filter
             if (SelectedServiceRoles.Any())
             {
-                query = (Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<MemberInfo, InvolvementAreas?>)query.Where(m =>
+                query = query.Where(m =>
                     m.MemberServiceRoles.Any(msr => SelectedServiceRoles.Contains(msr.InvolvementAreaID)));
             }
 
             // Apply interests filter
             if (SelectedInterests.Any())
             {
-                query = (Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<MemberInfo, InvolvementAreas?>)query.Where(m =>
+                query = query.Where(m =>
                     m.MemberInterests.Any(mi => SelectedInterests.Contains(mi.InterestAreaID)));
             }
 
             // Apply involvement areas filter
             if (SelectedInvolvementAreas.Any())
             {
-                query = (Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<MemberInfo, InvolvementAreas?>)query.Where(m =>
+                query = query.Where(m =>
                     m.MemberInvolvements.Any(mi => SelectedInvolvementAreas.Contains(mi.InvolvementAreaID)));
             }
 
@@ -132,7 +132,8 @@ namespace TestUserLogIn.Pages.Staff
             var selectedInterests = ParseIntList(interests);
             var selectedInvolvementAreas = ParseIntList(involvementAreas);
 
-            var query = _context.MemberInfos
+            // Use IQueryable instead of IIncludableQueryable
+            IQueryable<MemberInfo> query = _context.MemberInfos
                 .Where(m => m.IsActive)
                 .Include(m => m.MemberServiceRoles)
                 .ThenInclude(msr => msr.InvolvementArea)
@@ -143,7 +144,7 @@ namespace TestUserLogIn.Pages.Staff
 
             if (!string.IsNullOrEmpty(searchTerm))
             {
-                query = (Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<MemberInfo, InvolvementAreas?>)query.Where(m =>
+                query = query.Where(m =>
                     m.FirstName.Contains(searchTerm) ||
                     m.LastName.Contains(searchTerm) ||
                     m.Email.Contains(searchTerm) ||
@@ -152,19 +153,19 @@ namespace TestUserLogIn.Pages.Staff
 
             if (selectedServiceRoles.Any())
             {
-                query = (Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<MemberInfo, InvolvementAreas?>)query.Where(m =>
+                query = query.Where(m =>
                     m.MemberServiceRoles.Any(msr => selectedServiceRoles.Contains(msr.InvolvementAreaID)));
             }
 
             if (selectedInterests.Any())
             {
-                query = (Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<MemberInfo, InvolvementAreas?>)query.Where(m =>
+                query = query.Where(m =>
                     m.MemberInterests.Any(mi => selectedInterests.Contains(mi.InterestAreaID)));
             }
 
             if (selectedInvolvementAreas.Any())
             {
-                query = (Microsoft.EntityFrameworkCore.Query.IIncludableQueryable<MemberInfo, InvolvementAreas?>)query.Where(m =>
+                query = query.Where(m =>
                     m.MemberInvolvements.Any(mi => selectedInvolvementAreas.Contains(mi.InvolvementAreaID)));
             }
 
@@ -197,4 +198,3 @@ namespace TestUserLogIn.Pages.Staff
         }
     }
 }
-

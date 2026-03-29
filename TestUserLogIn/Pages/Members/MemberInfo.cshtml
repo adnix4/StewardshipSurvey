@@ -138,30 +138,33 @@
                 </div>
             </div>
 
-            <!-- Contact Preferences -->
+            <!-- Contact Preferences - Using hidden input + visible radio buttons -->
             <div class="mb-3">
                 <label class="form-label fw-semibold">Preferred Contact Method</label>
                 <p class="text-muted small">Select one preferred method of contact</p>
 
+                <!-- Hidden input to hold the value for model binding -->
+                <input type="hidden" name="PreferredContact" id="PreferredContactHidden" value="@Model.PreferredContact" />
+
                 <div class="form-check">
-                    <input class="form-check-input" type="radio" name="PreferredContact" id="contactPhone" value="Phone" 
-                           asp-for="PreferredContact" />
+                    <input class="form-check-input" type="radio" name="PreferredContactGroup" id="contactPhone" value="Phone" 
+                           @(Model.PreferredContact == "Phone" ? "checked" : "") />
                     <label class="form-check-label" for="contactPhone">
                         <i class="bi bi-telephone"></i> Phone Call
                     </label>
                 </div>
 
                 <div class="form-check">
-                    <input class="form-check-input" type="radio" name="PreferredContact" id="contactText" value="Text"
-                           asp-for="PreferredContact" />
+                    <input class="form-check-input" type="radio" name="PreferredContactGroup" id="contactText" value="Text"
+                           @(Model.PreferredContact == "Text" ? "checked" : "") />
                     <label class="form-check-label" for="contactText">
                         <i class="bi bi-chat-dots"></i> Text Message
                     </label>
                 </div>
 
                 <div class="form-check">
-                    <input class="form-check-input" type="radio" name="PreferredContact" id="contactEmail" value="Email"
-                           asp-for="PreferredContact" />
+                    <input class="form-check-input" type="radio" name="PreferredContactGroup" id="contactEmail" value="Email"
+                           @(Model.PreferredContact == "Email" ? "checked" : "") />
                     <label class="form-check-label" for="contactEmail">
                         <i class="bi bi-envelope"></i> Email
                     </label>
@@ -187,12 +190,22 @@
     <partial name="_ValidationScriptsPartial" />
 
     <script>
+        // Sync radio button group with hidden input for model binding
+        document.querySelectorAll('input[name="PreferredContactGroup"]').forEach(radio => {
+            radio.addEventListener('change', function () {
+                document.getElementById('PreferredContactHidden').value = this.value;
+                console.log('PreferredContact set to:', this.value);
+            });
+        });
+
         // Clickable tile behavior for radio buttons
         document.querySelectorAll('.form-check').forEach(tile => {
             tile.addEventListener('click', () => {
                 const radio = tile.querySelector('input[type="radio"]');
                 if (radio) {
                     radio.checked = true;
+                    // Trigger change event
+                    radio.dispatchEvent(new Event('change', { bubbles: true }));
                 }
             });
         });

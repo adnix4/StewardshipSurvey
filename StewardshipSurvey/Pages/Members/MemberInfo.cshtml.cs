@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using StewardshipSurvey.Data;
 using StewardshipSurvey.Models;
+using StewardshipSurvey.Models.DTOs;
 
 namespace StewardshipSurvey.Pages
 {
@@ -29,8 +30,10 @@ namespace StewardshipSurvey.Pages
             _logger = logger;
         }
 
+        // Deliberately not the MemberInfo entity. See MemberProfileInput for what binding
+        // the entity here allowed a crafted POST to reach.
         [BindProperty]
-        public MemberInfo MemberDetails { get; set; } = new();
+        public MemberProfileInput MemberDetails { get; set; } = new();
 
         [BindProperty]
         public string PreferredContact { get; set; } = string.Empty;
@@ -52,7 +55,7 @@ namespace StewardshipSurvey.Pages
 
             if (memberInfo != null)
             {
-                MemberDetails = memberInfo;
+                MemberDetails = MemberProfileInput.FromEntity(memberInfo);
                 
                 // Set the preferred contact based on the stored boolean values
                 if (MemberDetails.PrefersPhone)
@@ -62,22 +65,24 @@ namespace StewardshipSurvey.Pages
                 else if (MemberDetails.PrefersEmail)
                     PreferredContact = "Email";
                 
-                _logger.LogInformation($"Loaded existing member with PreferredContact: {PreferredContact}");
+                _logger.LogInformation("Loaded existing member with PreferredContact {PreferredContact}.", PreferredContact);
             }
             else
             {
-                MemberDetails = await _context.MemberInfos
-                    .FirstOrDefaultAsync(m => m.MemberID == user.MemberID) ?? new MemberInfo
-                {
-                    FirstName = "",
-                    LastName = "",
-                    Email = user.Email,
-                    ApplicationUser = user,
-                    CreatedDate = DateTime.UtcNow,
-                    IsActive = true
-                };
-                
-                _logger.LogInformation("Created new member info");
+                // The lookup above joins through the navigation property; this one follows
+                // AspNetUsers.MemberID instead. They disagree for a profile whose link was
+                // written from the user side, so both are tried before giving up.
+                var byUserLink = user.MemberID == null
+                    ? null
+                    : await _context.MemberInfos
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(m => m.MemberID == user.MemberID);
+
+                MemberDetails = byUserLink != null
+                    ? MemberProfileInput.FromEntity(byUserLink)
+                    : new MemberProfileInput { FirstName = "", LastName = "", Email = user.Email };
+
+                _logger.LogInformation("Started a new member profile.");
             }
 
             return Page();
@@ -96,7 +101,7 @@ namespace StewardshipSurvey.Pages
 
             try
             {
-                _logger.LogInformation($"OnPost: PreferredContact value = '{PreferredContact}'");
+                _logger.LogInformation("OnPost: PreferredContact value {PreferredContact}.", PreferredContact);
                 
                 // Reset all contact preferences
                 MemberDetails.PrefersPhone = false;
@@ -119,7 +124,7 @@ namespace StewardshipSurvey.Pages
                         _logger.LogInformation("Set PrefersEmail = true");
                         break;
                     default:
-                        _logger.LogWarning($"Unknown PreferredContact value: '{PreferredContact}'");
+                        _logger.LogWarning("Unknown PreferredContact value {PreferredContact}.", PreferredContact);
                         break;
                 }
 
@@ -128,34 +133,22 @@ namespace StewardshipSurvey.Pages
 
                 if (existing == null)
                 {
-                    // New profile
-                    MemberDetails.ApplicationUser = user;
-                    MemberDetails.CreatedDate = DateTime.UtcNow;
-                    MemberDetails.IsActive = true;
+                    // Server-owned fields are set here, never taken from the request.
+                    var created = new MemberInfo
+                    {
+                        ApplicationUser = user,
+                        CreatedDate = DateTime.UtcNow,
+                        IsActive = true
+                    };
 
-                    _context.MemberInfos.Add(MemberDetails);
+                    MemberDetails.ApplyTo(created);
+
+                    _context.MemberInfos.Add(created);
                     _logger.LogInformation("Created new MemberInfo for {User}", user.UserName);
                 }
                 else
                 {
-                    // Update profile
-                    existing.FirstName = MemberDetails.FirstName;
-                    existing.LastName = MemberDetails.LastName;
-                    existing.Address = MemberDetails.Address;
-                    existing.City = MemberDetails.City;
-                    existing.State = MemberDetails.State;
-                    existing.Zip = MemberDetails.Zip;
-                    existing.CellPhoneNumber = MemberDetails.CellPhoneNumber;
-                    existing.HomePhoneNumber = MemberDetails.HomePhoneNumber;                    
-                    existing.Email = MemberDetails.Email;
-                    existing.PreferredContactEmail = MemberDetails.PreferredContactEmail;
-                    existing.BirthDate = MemberDetails.BirthDate;
-                    existing.Sex = MemberDetails.Sex;
-                    existing.Comments = MemberDetails.Comments;
-                    existing.PrefersPhone = MemberDetails.PrefersPhone;
-                    existing.PrefersEmail = MemberDetails.PrefersEmail;
-                    existing.PrefersText = MemberDetails.PrefersText;
-                    existing.MembershipStatus = MemberDetails.MembershipStatus;
+                    MemberDetails.ApplyTo(existing);
                     existing.UpdatedDate = DateTime.UtcNow;
 
                     _context.MemberInfos.Update(existing);

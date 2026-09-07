@@ -44,19 +44,50 @@ namespace StewardshipSurvey.Controllers.Api
                 var user = await _userManager.FindByEmailAsync(request.Email);
                 if (user == null)
                 {
-                    _logger.LogWarning($"Login failed for {request.Email}: user not found");
+                    // Same message and status as a wrong password, so the endpoint cannot be
+                    // used to work out which addresses have accounts.
+                    _logger.LogWarning("API login failed for {Email}: no such user.", request.Email);
                     return Unauthorized(new { message = "Invalid email or password" });
                 }
 
-                var result = await _signInManager.PasswordSignInAsync(user, request.Password, false, false);
+                // lockoutOnFailure must stay true. It was false, which made this endpoint a
+                // lockout bypass for the whole application: an attacker who found it could
+                // guess passwords without limit even once the Razor login started counting.
+                var result = await _signInManager.PasswordSignInAsync(
+                    user, request.Password, isPersistent: false, lockoutOnFailure: true);
+
+                if (result.IsLockedOut)
+                {
+                    // Distinct from a plain rejection, which does tell a caller the account
+                    // exists. Accepted deliberately: the Razor path already reveals as much by
+                    // redirecting to its Lockout page, and leaving a locked-out member to
+                    // retry a password that cannot work is the worse outcome.
+                    _logger.LogWarning("API login blocked for {Email}: account locked out.", request.Email);
+                    return StatusCode(StatusCodes.Status423Locked, new
+                    {
+                        message = "Too many failed attempts. This account is locked temporarily."
+                    });
+                }
+
+                if (result.IsNotAllowed)
+                {
+                    // RequireConfirmedAccount is on. Reporting this as a bad password sent
+                    // people round in circles retrying credentials that were already correct.
+                    _logger.LogInformation("API login refused for {Email}: address not confirmed.", request.Email);
+                    return Unauthorized(new
+                    {
+                        message = "You need to confirm your email address before signing in."
+                    });
+                }
+
                 if (!result.Succeeded)
                 {
-                    _logger.LogWarning($"Login failed for {request.Email}: invalid password");
+                    _logger.LogWarning("API login failed for {Email}: invalid password.", request.Email);
                     return Unauthorized(new { message = "Invalid email or password" });
                 }
 
                 var token = GenerateJwtToken(user);
-                _logger.LogInformation($"User {request.Email} logged in successfully");
+                _logger.LogInformation("API login succeeded for {Email}.", request.Email);
 
                 return Ok(new
                 {
@@ -74,7 +105,7 @@ namespace StewardshipSurvey.Controllers.Api
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error during login for {request.Email}");
+                _logger.LogError(ex, "Error during login for {Email}.", request.Email);
                 return StatusCode(500, new { message = "An error occurred during login" });
             }
         }

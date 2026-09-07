@@ -110,9 +110,11 @@ namespace StewardshipSurvey.Areas.Identity.Pages.Account
 
             if (ModelState.IsValid)
             {
-                // This doesn't count login failures towards account lockout
-                // To enable password failures to trigger account lockout, set lockoutOnFailure: true
-                var result = await _signInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+                // lockoutOnFailure must stay true. It was false here - the scaffolded
+                // default - which meant nothing ever incremented AccessFailedCount and the
+                // IsLockedOut branch below could not be reached. The lockout policy itself
+                // is configured in Program.cs.
+                var result = await _signInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: true);
                 if (result.Succeeded)
                 {
                     _logger.LogInformation("User logged in.");

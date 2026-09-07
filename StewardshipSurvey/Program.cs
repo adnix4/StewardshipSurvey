@@ -12,7 +12,21 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
+builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
+    {
+        options.SignIn.RequireConfirmedAccount = true;
+
+        // Stated rather than inherited. These happen to match the framework defaults, but
+        // both sign-in paths passed lockoutOnFailure: false until recently, so the policy
+        // had no effect at all and nothing on screen said so.
+        //
+        // Five attempts per fifteen minutes caps a single account at roughly 480 guesses a
+        // day. That is not a defence against a leaked hash; it is a defence against someone
+        // pointing a list of common passwords at the login form.
+        options.Lockout.MaxFailedAccessAttempts = 5;
+        options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+        options.Lockout.AllowedForNewUsers = true;
+    })
     .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>();
 

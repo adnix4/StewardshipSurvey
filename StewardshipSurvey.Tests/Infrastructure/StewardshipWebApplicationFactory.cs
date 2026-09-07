@@ -46,7 +46,13 @@ namespace StewardshipSurvey.Tests.Infrastructure
                 new Dictionary<string, string?>
                 {
                     ["Email:FileDropPath"] = MailDropPath,
-                    ["Email:Smtp:Host"] = null
+                    ["Email:Smtp:Host"] = null,
+
+                    // AuthController refuses to mint a token without this and returns 500,
+                    // so a successful API sign-in cannot be exercised unless it is set.
+                    // A fixed literal is fine here: nothing validates these tokens yet, and
+                    // the database is thrown away when the run ends.
+                    ["Jwt:Key"] = "test-only-signing-key-not-used-anywhere-else-32+"
                 }));
 
             builder.ConfigureServices(services =>

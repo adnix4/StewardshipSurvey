@@ -35,7 +35,6 @@ TestUserLogIn.Maui/
 ??? MauiProgram.cs                          # Application entry point & DI
 ??? App.xaml, App.xaml.cs                   # Application resources
 ??? AppShell.xaml, AppShell.xaml.cs         # Navigation shell
-??? MAUI_SETUP_GUIDE.md                     # Detailed setup instructions
 ?
 ??? Pages/
 ?   ??? LoginPage.xaml(.cs)                 # Login screen

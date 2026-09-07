@@ -38,9 +38,36 @@ namespace StewardshipSurvey.Controllers.Api
             return Ok(MapToMemberDto(member));
         }
 
+        /// <summary>
+        /// Reads one member profile by id. A caller may read their own profile; Staff and
+        /// Admin may read any.
+        /// <para>
+        /// The ownership check is the point of this method. Without it the class-level
+        /// <c>[Authorize]</c> was the only gate, so any signed-in account could walk
+        /// <c>id = 1..n</c> and pull every member's home address, birth date, sex and phone
+        /// numbers. Registration is public, so "any signed-in account" meant anyone.
+        /// </para>
+        /// </summary>
         [HttpGet("{id}")]
         public async Task<ActionResult<MemberDto>> GetMember(int id)
         {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized();
+
+            var isOwnProfile = user.MemberID != null && user.MemberID == id;
+            var isPrivileged = User.IsInRole(Roles.Staff) || User.IsInRole(Roles.Admin);
+
+            // Decided before the lookup on purpose. Answering 403 for a forbidden id but 404
+            // for a missing one would still let a caller map which ids exist.
+            //
+            // Not Forbid(): with no bearer scheme registered this endpoint authenticates by
+            // cookie, and the cookie handler turns a forbid into a 302 to the Access Denied
+            // page - an HTML redirect the mobile client cannot interpret. Verified in
+            // MembersApiTests. Say 403 outright until the bearer scheme lands.
+            if (!isOwnProfile && !isPrivileged)
+                return StatusCode(StatusCodes.Status403Forbidden);
+
             var member = await _context.MemberInfos
                 .FirstOrDefaultAsync(m => m.MemberID == id);
 

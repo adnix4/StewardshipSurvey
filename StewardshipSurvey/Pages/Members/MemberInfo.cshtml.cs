@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -48,7 +48,7 @@ namespace StewardshipSurvey.Pages
             // Load existing MemberInfo if it exists
             var memberInfo = await _context.MemberInfos
                 .AsNoTracking()
-                .FirstOrDefaultAsync(m => m.ApplicationUser.Id == user.Id);
+                .FirstOrDefaultAsync(m => m.ApplicationUser!.Id == user.Id);
 
             if (memberInfo != null)
             {
@@ -124,7 +124,7 @@ namespace StewardshipSurvey.Pages
                 }
 
                 var existing = await _context.MemberInfos
-                    .FirstOrDefaultAsync(m => m.ApplicationUser.Id == user.Id);
+                    .FirstOrDefaultAsync(m => m.ApplicationUser!.Id == user.Id);
 
                 if (existing == null)
                 {

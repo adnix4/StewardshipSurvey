@@ -85,7 +85,7 @@
                                 <td>@member.Email</td>
                                 <td>@member.CellPhoneNumber</td>
                                 <td>
-                                    @if (member.MemberServiceRoles?.Any() == true)
+                                    @if (member.MemberServiceRoles.Any())
                                     {
                                         <ul class="mb-0 ps-3">
                                             @foreach (var role in member.MemberServiceRoles)
@@ -100,7 +100,7 @@
                                     }
                                 </td>
                                 <td>
-                                    @if (member.MemberInterests?.Any() == true)
+                                    @if (member.MemberInterests.Any())
                                     {
                                         <ul class="mb-0 ps-3">
                                             @foreach (var interest in member.MemberInterests)
@@ -115,7 +115,7 @@
                                     }
                                 </td>
                                 <td>
-                                    @if (member.MemberInvolvements?.Any() == true)
+                                    @if (member.MemberInvolvements.Any())
                                     {
                                         <ul class="mb-0 ps-3">
                                             @foreach (var involvement in member.MemberInvolvements)
@@ -310,7 +310,7 @@
                                 <td>@member.Email</td>
                                 <td>@member.CellPhoneNumber</td>
                                 <td>
-                                    @if (member.MemberServiceRoles?.Any() == true)
+                                    @if (member.MemberServiceRoles.Any())
                                     {
                                         <ul class="mb-0 ps-3">
                                             @foreach (var role in member.MemberServiceRoles)
@@ -325,7 +325,7 @@
                                     }
                                 </td>
                                 <td>
-                                    @if (member.MemberInterests?.Any() == true)
+                                    @if (member.MemberInterests.Any())
                                     {
                                         <ul class="mb-0 ps-3">
                                             @foreach (var interest in member.MemberInterests)
@@ -340,7 +340,7 @@
                                     }
                                 </td>
                                 <td>
-                                    @if (member.MemberInvolvements?.Any() == true)
+                                    @if (member.MemberInvolvements.Any())
                                     {
                                         <ul class="mb-0 ps-3">
                                             @foreach (var involvement in member.MemberInvolvements)

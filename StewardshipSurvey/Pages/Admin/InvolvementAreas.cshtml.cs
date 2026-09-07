@@ -39,7 +39,7 @@ namespace StewardshipSurvey.Pages.Admin
         // Add new involvement area
         public IActionResult OnPost()
         {
-            FixModelStateBinding("NewInvolvementArea", "AreaOfInvolvement", NewInvolvementArea?.AreaOfInvolvement);
+            FixModelStateBinding("NewInvolvementArea", "AreaOfInvolvement", NewInvolvementArea.AreaOfInvolvement);
 
             ModelState.Remove("EditInvolvementArea.AreaOfInvolvement");
 
@@ -120,7 +120,7 @@ namespace StewardshipSurvey.Pages.Admin
 
                 return BadRequest();
             }
-            FixModelStateBinding("EditInvolvementArea", "AreaOfInvolvement", EditInvolvementArea?.AreaOfInvolvement);
+            FixModelStateBinding("EditInvolvementArea", "AreaOfInvolvement", EditInvolvementArea.AreaOfInvolvement);
             ModelState.Remove("NewInvolvementArea.AreaOfInvolvement");
 
             if (!ModelStateCheck("OnPostSaveEdit"))

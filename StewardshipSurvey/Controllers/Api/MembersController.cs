@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -91,20 +91,20 @@ namespace StewardshipSurvey.Controllers.Api
             return new MemberDto
             {
                 MemberID = member.MemberID,
-                FirstName = member.FirstName,
-                LastName = member.LastName,
-                Email = member.Email,
-                CellPhoneNumber = member.CellPhoneNumber,
-                HomePhoneNumber = member.HomePhoneNumber,
-                WorkPhoneNumber = member.WorkPhoneNumber,
-                PreferredContactEmail = member.PreferredContactEmail,
-                Address = member.Address,
-                City = member.City,
-                State = member.State,
-                Zip = member.Zip,
+                FirstName = member.FirstName ?? string.Empty,
+                LastName = member.LastName ?? string.Empty,
+                Email = member.Email ?? string.Empty,
+                CellPhoneNumber = member.CellPhoneNumber ?? string.Empty,
+                HomePhoneNumber = member.HomePhoneNumber ?? string.Empty,
+                WorkPhoneNumber = member.WorkPhoneNumber ?? string.Empty,
+                PreferredContactEmail = member.PreferredContactEmail ?? string.Empty,
+                Address = member.Address ?? string.Empty,
+                City = member.City ?? string.Empty,
+                State = member.State ?? string.Empty,
+                Zip = member.Zip ?? string.Empty,
                 BirthDate = member.BirthDate,
-                Sex = member.Sex,
-                Comments = member.Comments,
+                Sex = member.Sex ?? string.Empty,
+                Comments = member.Comments ?? string.Empty,
                 IsActive = member.IsActive,
                 PrefersPhone = member.PrefersPhone,
                 PrefersEmail = member.PrefersEmail,

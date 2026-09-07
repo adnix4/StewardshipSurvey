@@ -63,9 +63,9 @@ namespace StewardshipSurvey.Models
         public bool PrefersText { get; set; }
 
         public ApplicationUser? ApplicationUser { get; set; }
-        public ICollection<MemberInterest>? MemberInterests { get; set; }
-        public ICollection<MemberInvolvement>? MemberInvolvements { get; set; }
-        public ICollection<MemberServiceRole>? MemberServiceRoles { get; set; }
+        public ICollection<MemberInterest> MemberInterests { get; set; } = new List<MemberInterest>();
+        public ICollection<MemberInvolvement> MemberInvolvements { get; set; } = new List<MemberInvolvement>();
+        public ICollection<MemberServiceRole> MemberServiceRoles { get; set; } = new List<MemberServiceRole>();
 
         // Custom validation method for BirthDate
         public static ValidationResult? ValidateBirthDate(DateTime? birthDate, ValidationContext context)

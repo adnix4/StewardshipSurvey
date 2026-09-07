@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -32,7 +32,7 @@ namespace StewardshipSurvey.Controllers.Api
                 {
                     InvolvementAreaID = ia.InvolvementAreaID,
                     AreaOfInvolvement = ia.AreaOfInvolvement,
-                    Description = ia.Description,
+                    Description = ia.Description ?? string.Empty,
                     IsActive = ia.IsActive
                 })
                 .ToListAsync();
@@ -55,7 +55,7 @@ namespace StewardshipSurvey.Controllers.Api
                 {
                     MemberID = mi.MemberID,
                     InvolvementAreaID = mi.InvolvementAreaID,
-                    AreaOfInvolvement = mi.InvolvementArea.AreaOfInvolvement
+                    AreaOfInvolvement = mi.InvolvementArea!.AreaOfInvolvement
                 })
                 .ToListAsync();
 

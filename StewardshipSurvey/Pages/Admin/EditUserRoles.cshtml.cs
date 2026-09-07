@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -18,7 +18,7 @@ namespace StewardshipSurvey.Pages.Admin
             _roleManager = roleManager;
         }
 
-        public ApplicationUser CurrentUser { get; set; }
+        public ApplicationUser? CurrentUser { get; set; }
         public List<RoleSelection> Roles { get; set; } = new List<RoleSelection>();
 
         public class RoleSelection
@@ -45,7 +45,7 @@ namespace StewardshipSurvey.Pages.Admin
                 Roles.Add(new RoleSelection
                 {
                     RoleName = role.Name,
-                    Selected = userRoles.Contains(role.Name)
+                    Selected = role.Name != null && userRoles.Contains(role.Name)
                 });
             }
             return Page();

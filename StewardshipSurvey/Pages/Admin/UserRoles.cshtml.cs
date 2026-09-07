@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -21,7 +21,7 @@ namespace StewardshipSurvey.Pages.Admin
             _roleManager = roleManager;
         }
 
-        public List<UserRoleViewModel> UsersWithRoles { get; set; }
+        public List<UserRoleViewModel> UsersWithRoles { get; set; } = new();
 
         public async Task OnGetAsync()
         {
@@ -36,7 +36,7 @@ namespace StewardshipSurvey.Pages.Admin
                 UsersWithRoles.Add(new UserRoleViewModel
                 {
                     UserId = user.Id,
-                    Email = user.Email,
+                    Email = user.Email ?? string.Empty,
                     FirstName = user.Member?.FirstName ?? "No first name",
                     LastName = user.Member?.LastName ?? "No last name",
                     Roles = roles.ToList()
@@ -45,10 +45,10 @@ namespace StewardshipSurvey.Pages.Admin
         }
         public class UserRoleViewModel
         {
-            public string UserId { get; set; }
-            public string Email { get; set; }
-            public string FirstName { get; set; }
-            public string LastName { get; set; }
+            public string UserId { get; set; } = string.Empty;
+            public string Email { get; set; } = string.Empty;
+            public string FirstName { get; set; } = string.Empty;
+            public string LastName { get; set; } = string.Empty;
             public List<string> Roles { get; set; } = new List<string>();
         }
               

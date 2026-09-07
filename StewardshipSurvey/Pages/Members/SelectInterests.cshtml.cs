@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -51,7 +51,7 @@ namespace StewardshipSurvey.Pages.Members
                     {
                         InterestAreaID = ia.InterestAreaID,
                         InterestArea = ia.InterestArea,
-                        Description = ia.Description,
+                        Description = ia.Description ?? string.Empty,
                         IsActive = ia.IsActive
                     })
                     .ToListAsync();

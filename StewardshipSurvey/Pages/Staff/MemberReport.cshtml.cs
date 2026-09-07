@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using StewardshipSurvey.Data;
@@ -78,10 +78,10 @@ namespace StewardshipSurvey.Pages.Staff
             if (!string.IsNullOrEmpty(searchTerm))
             {
                 query = query.Where(m =>
-                    m.FirstName.Contains(searchTerm) ||
-                    m.LastName.Contains(searchTerm) ||
-                    m.Email.Contains(searchTerm) ||
-                    m.CellPhoneNumber.Contains(searchTerm));
+                    (m.FirstName ?? "").Contains(searchTerm) ||
+                    (m.LastName ?? "").Contains(searchTerm) ||
+                    (m.Email ?? "").Contains(searchTerm) ||
+                    (m.CellPhoneNumber ?? "").Contains(searchTerm));
             }
 
             // Apply service roles filter
@@ -145,10 +145,10 @@ namespace StewardshipSurvey.Pages.Staff
             if (!string.IsNullOrEmpty(searchTerm))
             {
                 query = query.Where(m =>
-                    m.FirstName.Contains(searchTerm) ||
-                    m.LastName.Contains(searchTerm) ||
-                    m.Email.Contains(searchTerm) ||
-                    m.CellPhoneNumber.Contains(searchTerm));
+                    (m.FirstName ?? "").Contains(searchTerm) ||
+                    (m.LastName ?? "").Contains(searchTerm) ||
+                    (m.Email ?? "").Contains(searchTerm) ||
+                    (m.CellPhoneNumber ?? "").Contains(searchTerm));
             }
 
             if (selectedServiceRoles.Any())
@@ -174,17 +174,26 @@ namespace StewardshipSurvey.Pages.Staff
             var csv = "First Name,Last Name,Email,Phone,Service Roles,Interests,Involvement Areas,Status\n";
             foreach (var member in members)
             {
-                var serviceRolesList = string.Join("; ", member.MemberServiceRoles?.Select(r => r.InvolvementArea?.AreaOfInvolvement) ?? Array.Empty<string>());
-                var interestsList = string.Join("; ", member.MemberInterests?.Select(i => i.InterestArea?.InterestArea) ?? Array.Empty<string>());
-                var involvementsList = string.Join("; ", member.MemberInvolvements?.Select(i => i.InvolvementArea?.AreaOfInvolvement) ?? Array.Empty<string>());
+                var serviceRolesList = string.Join("; ", member.MemberServiceRoles.Select(r => r.InvolvementArea?.AreaOfInvolvement ?? ""));
+                var interestsList = string.Join("; ", member.MemberInterests.Select(i => i.InterestArea?.InterestArea ?? ""));
+                var involvementsList = string.Join("; ", member.MemberInvolvements.Select(i => i.InvolvementArea?.AreaOfInvolvement ?? ""));
                 var status = member.IsActive ? "Active" : "Inactive";
 
-                csv += $"\"{member.FirstName}\",\"{member.LastName}\",\"{member.Email}\",\"{member.CellPhoneNumber}\",\"{serviceRolesList}\",\"{interestsList}\",\"{involvementsList}\",\"{status}\"\n";
+                csv += string.Join(",", new[]
+                {
+                    member.FirstName, member.LastName, member.Email, member.CellPhoneNumber,
+                    serviceRolesList, interestsList, involvementsList, status
+                }.Select(CsvField)) + "\n";
             }
 
             var bytes = System.Text.Encoding.UTF8.GetBytes(csv);
             return File(bytes, "text/csv", "MemberReport.csv");
         }
+
+        // RFC 4180: wrap every field in quotes and double any quote inside it, so a
+        // name or comment containing a quote cannot break the row's column alignment.
+        private static string CsvField(string? value) =>
+            $"\"{(value ?? string.Empty).Replace("\"", "\"\"")}\"";
 
         private List<int> ParseIntList(string commaSeparatedValues)
         {

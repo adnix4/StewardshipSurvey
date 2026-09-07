@@ -11,7 +11,7 @@ namespace StewardshipSurvey.Models
         
         [Required(ErrorMessage = "Interest Area is required")]
         [Display(Name = "Interest Area")]
-        public string InterestArea { get; set; }
+        public string InterestArea { get; set; } = string.Empty;
 
         [Display(Name = "Description")]
         public string? Description { get; set; }
@@ -19,6 +19,6 @@ namespace StewardshipSurvey.Models
         public bool IsActive { get; set; } = true;
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedDate { get; set; }
-        public ICollection<MemberInterest>? MemberInterests { get; set; }
+        public ICollection<MemberInterest> MemberInterests { get; set; } = new List<MemberInterest>();
     }
 }

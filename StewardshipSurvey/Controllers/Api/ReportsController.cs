@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StewardshipSurvey.Data;
@@ -44,10 +44,10 @@ namespace StewardshipSurvey.Controllers.Api
             if (!string.IsNullOrEmpty(searchTerm))
             {
                 query = query.Where(m =>
-                    m.FirstName.Contains(searchTerm) ||
-                    m.LastName.Contains(searchTerm) ||
-                    m.Email.Contains(searchTerm) ||
-                    m.CellPhoneNumber.Contains(searchTerm));
+                    (m.FirstName ?? "").Contains(searchTerm) ||
+                    (m.LastName ?? "").Contains(searchTerm) ||
+                    (m.Email ?? "").Contains(searchTerm) ||
+                    (m.CellPhoneNumber ?? "").Contains(searchTerm));
             }
 
             if (selectedServiceRoles.Any())
@@ -84,14 +84,14 @@ namespace StewardshipSurvey.Controllers.Api
             var report = members.Select(m => new MemberReportDto
             {
                 MemberID = m.MemberID,
-                FirstName = m.FirstName,
-                LastName = m.LastName,
-                Email = m.Email,
-                CellPhoneNumber = m.CellPhoneNumber,
+                FirstName = m.FirstName ?? string.Empty,
+                LastName = m.LastName ?? string.Empty,
+                Email = m.Email ?? string.Empty,
+                CellPhoneNumber = m.CellPhoneNumber ?? string.Empty,
                 IsActive = m.IsActive,
-                ServiceRoles = m.MemberServiceRoles?.Select(r => r.InvolvementArea?.AreaOfInvolvement).ToList() ?? new(),
-                Interests = m.MemberInterests?.Select(i => i.InterestArea?.InterestArea).ToList() ?? new(),
-                InvolvementAreas = m.MemberInvolvements?.Select(i => i.InvolvementArea?.AreaOfInvolvement).ToList() ?? new()
+                ServiceRoles = m.MemberServiceRoles.Select(r => r.InvolvementArea?.AreaOfInvolvement ?? string.Empty).ToList(),
+                Interests = m.MemberInterests.Select(i => i.InterestArea?.InterestArea ?? string.Empty).ToList(),
+                InvolvementAreas = m.MemberInvolvements.Select(i => i.InvolvementArea?.AreaOfInvolvement ?? string.Empty).ToList()
             }).ToList();
 
             return Ok(report);

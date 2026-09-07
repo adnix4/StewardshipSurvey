@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -39,7 +39,7 @@ namespace StewardshipSurvey.Pages.Admin
         // Add new interest area
         public IActionResult OnPost()
         {
-            FixModelStateBinding("NewInterestArea", "InterestArea", NewInterestArea?.InterestArea);
+            FixModelStateBinding("NewInterestArea", "InterestArea", NewInterestArea.InterestArea);
 
             ModelState.Remove("EditInterestArea.InterestArea");
 
@@ -120,7 +120,7 @@ namespace StewardshipSurvey.Pages.Admin
                 _logger.LogWarning("EditInterestArea is null in OnPostSaveEdit");
                 return BadRequest();
             }
-            FixModelStateBinding("EditInterestArea", "InterestArea", EditInterestArea?.InterestArea);
+            FixModelStateBinding("EditInterestArea", "InterestArea", EditInterestArea.InterestArea);
             ModelState.Remove("NewInterestArea.InterestArea");
             ModelState.Remove("NewInterestArea.Description");
             if (!ModelStateCheck("OnPostSaveEdit"))
@@ -130,7 +130,7 @@ namespace StewardshipSurvey.Pages.Admin
                 var existing = _context.InterestAreas.Find(EditInterestArea.InterestAreaID);
                 if (existing == null)
                 {
-                    _logger.LogWarning("Interest Area with ID {Id} not found for saving edits", EditInterestAreaId.Value);
+                    _logger.LogWarning("Interest Area with ID {Id} not found for saving edits", EditInterestArea.InterestAreaID);
                     return NotFound();
                 }
                 // Check for duplicates

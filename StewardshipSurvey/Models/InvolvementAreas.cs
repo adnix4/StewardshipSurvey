@@ -11,7 +11,7 @@ namespace StewardshipSurvey.Models
 
         [Required(ErrorMessage = "Area of Involvement is required")]
         [Display(Name = "Area of Involvement")]
-        public string AreaOfInvolvement { get; set; }
+        public string AreaOfInvolvement { get; set; } = string.Empty;
 
         [Display(Name = "Description")]
         public string? Description { get; set; }
@@ -19,8 +19,8 @@ namespace StewardshipSurvey.Models
         public bool IsActive { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime? UpdatedDate { get; set; }
-        public ICollection<MemberInvolvement>? MemberInvolvements { get; set; }
+        public ICollection<MemberInvolvement> MemberInvolvements { get; set; } = new List<MemberInvolvement>();
 
-        public ICollection<MemberServiceRole>? MemberServiceRoles { get; set; }
+        public ICollection<MemberServiceRole> MemberServiceRoles { get; set; } = new List<MemberServiceRole>();
     }
 }

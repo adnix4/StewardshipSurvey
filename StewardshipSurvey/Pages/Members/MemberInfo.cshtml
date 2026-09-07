@@ -1,0 +1,227 @@
+@page
+@model StewardshipSurvey.Pages.MemberInfoModel
+@{
+    ViewData["Title"] = "My Information";
+}
+
+
+<div class="card shadow-sm scripture-card mb-4">
+    <div class="card-body">
+        <h5>
+            For you created my inner organs. You wove me together in my mother's womb.
+            I praise you because I am fearfully and wonderfully made.
+            Your works are wonderful, and my soul knows that very well.
+        </h5>
+        <h5 class="citedVerse">&minus; Psalm 139:13,14</h5>
+    </div>
+</div>
+
+<h2 class="mb-4">Welcome, please verify or enter your profile information.</h2>
+
+
+@if (Model.Roles.Any())
+{
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h4 class="card-title">Registered Positions</h4>
+            <ul class="list-group list-group-flush">
+                @foreach (var role in Model.Roles)
+                {
+                    <li class="list-group-item">@role</li>
+                }
+            </ul>
+        </div>
+    </div>
+}
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger" id="validationSummary">
+        <strong>Please correct the following errors:</strong>
+        <ul class="mb-0">
+            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <li>@error.ErrorMessage</li>
+            }
+        </ul>
+    </div>
+}
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <form method="post" id="memberForm" novalidate>
+            <h4 class="card-title mb-3">Your Profile</h4>
+            <p class="text-muted mb-4"><span class="text-danger">*</span> Indicates required fields.</p>
+
+            <!-- Name -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label asp-for="MemberDetails.FirstName" class="form-label required-label"></label>
+                    <input asp-for="MemberDetails.FirstName" class="form-control" required />
+                    <span asp-validation-for="MemberDetails.FirstName" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="MemberDetails.LastName" class="form-label required-label"></label>
+                    <input asp-for="MemberDetails.LastName" class="form-control" required />
+                    <span asp-validation-for="MemberDetails.LastName" class="text-danger"></span>
+                </div>
+            </div>
+
+            <!-- Email -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label asp-for="MemberDetails.Email" class="form-label required-label"></label>
+                    <input asp-for="MemberDetails.Email" type="email" class="form-control" required />
+                    <span asp-validation-for="MemberDetails.Email" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="MemberDetails.PreferredContactEmail" class="form-label"></label>
+                    <input asp-for="MemberDetails.PreferredContactEmail" type="email" class="form-control" />
+                    <div class="form-text">Optional — if different from login email.</div>
+                </div>
+            </div>
+
+            <!-- Phones -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label asp-for="MemberDetails.CellPhoneNumber" class="form-label"></label>
+                    <input asp-for="MemberDetails.CellPhoneNumber" class="form-control" />
+                    <span asp-validation-for="MemberDetails.CellPhoneNumber" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="MemberDetails.HomePhoneNumber" class="form-label"></label>
+                    <input asp-for="MemberDetails.HomePhoneNumber" class="form-control" />
+                    <span asp-validation-for="MemberDetails.HomePhoneNumber" class="text-danger"></span>
+                </div>
+            </div>
+
+            <!-- Address -->
+            <div class="mb-3">
+                <label asp-for="MemberDetails.Address" class="form-label"></label>
+                <input asp-for="MemberDetails.Address" class="form-control" />
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <label asp-for="MemberDetails.City" class="form-label"></label>
+                    <input asp-for="MemberDetails.City" class="form-control" />
+                </div>
+
+                <div class="col-md-4">
+                    <label asp-for="MemberDetails.State" class="form-label"></label>
+                    <input asp-for="MemberDetails.State" class="form-control" />
+                </div>
+
+                <div class="col-md-4">
+                    <label asp-for="MemberDetails.Zip" class="form-label"></label>
+                    <input asp-for="MemberDetails.Zip" class="form-control" />
+                </div>
+            </div>
+
+            <!-- Birthdate & Gender -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label asp-for="MemberDetails.BirthDate" class="form-label"></label>
+                    <input asp-for="MemberDetails.BirthDate" type="date" class="form-control" max="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="MemberDetails.Sex" class="form-label"></label>
+                    <select asp-for="MemberDetails.Sex" class="form-select">
+                        <option value="">-- Select --</option>
+                        <option>Male</option>
+                        <option>Female</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Contact Preferences - Using hidden input + visible radio buttons -->
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Preferred Contact Method</label>
+                <p class="text-muted small">Select one preferred method of contact</p>
+
+                <!-- Hidden input to hold the value for model binding -->
+                <input type="hidden" name="PreferredContact" id="PreferredContactHidden" value="@Model.PreferredContact" />
+
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="PreferredContactGroup" id="contactPhone" value="Phone" 
+                           @(Model.PreferredContact == "Phone" ? "checked" : "") />
+                    <label class="form-check-label" for="contactPhone">
+                        <i class="bi bi-telephone"></i> Phone Call
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="PreferredContactGroup" id="contactText" value="Text"
+                           @(Model.PreferredContact == "Text" ? "checked" : "") />
+                    <label class="form-check-label" for="contactText">
+                        <i class="bi bi-chat-dots"></i> Text Message
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="PreferredContactGroup" id="contactEmail" value="Email"
+                           @(Model.PreferredContact == "Email" ? "checked" : "") />
+                    <label class="form-check-label" for="contactEmail">
+                        <i class="bi bi-envelope"></i> Email
+                    </label>
+                </div>
+            </div>
+
+            <!-- Comments -->
+            <div class="mb-3">
+                <label asp-for="MemberDetails.Comments" class="form-label"></label>
+                <textarea asp-for="MemberDetails.Comments" class="form-control" rows="3"></textarea>
+            </div>
+
+            <!-- Submit -->
+            <button type="submit" class="btn btn-primary w-100 py-2 mt-3">
+                <i class="bi bi-save"></i> Select Interests
+            </button>
+
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        // Sync radio button group with hidden input for model binding
+        document.querySelectorAll('input[name="PreferredContactGroup"]').forEach(radio => {
+            radio.addEventListener('change', function () {
+                document.getElementById('PreferredContactHidden').value = this.value;
+                console.log('PreferredContact set to:', this.value);
+            });
+        });
+
+        // Clickable tile behavior for radio buttons
+        document.querySelectorAll('.form-check').forEach(tile => {
+            tile.addEventListener('click', () => {
+                const radio = tile.querySelector('input[type="radio"]');
+                if (radio) {
+                    radio.checked = true;
+                    // Trigger change event
+                    radio.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            });
+        });
+
+        // Toast validation
+        document.getElementById('memberForm').addEventListener('submit', function (event) {
+            const form = event.target;
+
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+                form.classList.add('was-validated');
+
+                const toast = new bootstrap.Toast(document.getElementById('validationToast'));
+                toast.show();
+            }
+        });
+    </script>
+}

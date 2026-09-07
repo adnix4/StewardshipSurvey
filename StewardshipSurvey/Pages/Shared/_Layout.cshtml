@@ -1,0 +1,94 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - StewardshipSurvey</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/StewardshipSurvey.styles.css" asp-append-version="true" />
+</head>
+<body class ="d-flex flex-column min-vh-100">
+    <header>
+        <nav class="navbar navbar-expand-lg custom-navbar border-bottom box-shadow mb-3">
+            <div class="container">
+                <a class="navbar-brand" href="https://www.stmark-wels.org/" target="_blank" rel="noopener noreferrer">
+                    <img src="~/images/logos/st.mark_logo.png" alt="St. Mark" />
+                </a>
+
+                <!-- Mobile toggle button-->
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar">                        
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+
+                <div class="collapse navbar-collapse" id="mainNavbar">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+                        <li class="nav-item">
+                            <a class="nav-link" asp-page="/Index">Stewardship Survey</a>
+                        </li>
+                        @* <li class="nav-item">
+                            <a class="nav-link text-light" asp-area="" asp-page="/Privacy">Privacy</a>
+                        </li> *@
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <li class="nav-item dropdown">
+								<a class="nav-link dropdown-toggle "href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown">Admin Areas</a>
+								<ul class="dropdown-menu" >
+                                    <li><a class="dropdown-item"  asp-page="/Admin">Admin</a></li>
+                                    <li><a class="dropdown-item" asp-page="/Admin/UserRoles">User Roles</a></li>
+                                    <li><a class="dropdown-item" asp-page="/Admin/InvolvementAreas">Involvement Areas</a></li>
+                                    <li><a class="dropdown-item" asp-page="/Admin/InterestAreas">Interest Areas</a></li>
+                                    <li><a class="dropdown-item" asp-page="/Staff/MemberReport">Member Report</a></li>
+                                </ul>
+                            </li>
+
+						}
+
+                        @if (User.IsInRole("Staff"))                        
+                        {
+
+                            <li class="nav-item">
+                                <a class="nav-link " asp-area="" asp-page="/Staff/MemberReport">Member Report</a>
+                            </li>
+                        }
+                        
+                        @if (User.IsInRole("VolunteerOrganizer"))
+                        {
+                            <li class="nav-item">
+                                @* <a class="nav-link " asp-area="" asp-page="/MemberInfo">MemberInfo</a> *@
+                            </li>
+                        }
+                        @if (User.IsInRole("RegisteredUser"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-page="/Members/MemberInfo">MemberInfo</a>
+                            </li>
+						}                       
+                        
+                    </ul>
+                    <partial name="_LoginPartial" />
+                </div>
+            </div>
+        </nav>
+    </header>
+    <div class="container">
+        <main role="main" class="flex-fill pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="border-top footer text-muted mt-auto">
+        <div class="container">
+            &copy; 2025 - St. Mark EC - <a asp-area="" asp-page="/Privacy">Privacy</a>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

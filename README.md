@@ -24,9 +24,9 @@ No credentials are stored in this repository. The development accounts and the J
 signing key are read from configuration, and the app uses
 [.NET user secrets](https://learn.microsoft.com/aspnet/core/security/app-secrets) to
 keep them off disk in the project folder. `UserSecretsId` is already declared in
-`TestUserLogIn.csproj`, so no additional setup is required.
+`StewardshipSurvey.csproj`, so no additional setup is required.
 
-Run the following from the `TestUserLogIn` project folder, choosing your own values.
+Run the following from the `StewardshipSurvey` project folder, choosing your own values.
 Passwords must satisfy the default ASP.NET Identity policy: at least 8 characters with
 an uppercase letter, a lowercase letter, a digit, and a non-alphanumeric character.
 

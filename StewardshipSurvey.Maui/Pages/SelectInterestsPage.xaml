@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="StewardshipSurvey.Maui.SelectInterestsPage"
+             Title="Select Interests"
+             BackgroundColor="{StaticResource PageBackgroundColor}">
+
+    <Grid RowDefinitions="*,Auto" Padding="20">
+        <VerticalStackLayout Spacing="15">
+            <Label Text="Select the areas and items that interest you most" FontSize="18" FontAttributes="Bold" />
+
+            <CollectionView ItemsSource="{Binding AllInterests}" SelectionMode="Multiple" SelectionChangedCommand="{Binding ToggleInterestCommand}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <StackLayout Padding="10" Spacing="5" BorderStroke="{StaticResource PrimaryColor}" BorderStrokeThickness="1" Margin="0,5">
+                            <CheckBox 
+                                IsChecked="{Binding ., Converter={StaticResource SelectedInterestConverter}, ConverterParameter={Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext}}"
+                                Content="{Binding InterestArea}" />
+                            <Label Text="{Binding Description}" FontSize="12" TextColor="{StaticResource TextSecondaryColor}" />
+                        </StackLayout>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <!-- Error Message -->
+            <Label 
+                Text="{Binding ErrorMessage}" 
+                TextColor="{StaticResource ErrorColor}"
+                IsVisible="{Binding ErrorMessage, Converter={StaticResource StringToBoolConverter}}"
+                Margin="0,10" />
+        </VerticalStackLayout>
+
+        <!-- Buttons -->
+        <Button 
+            Grid.Row="1"
+            Text="Next"
+            Command="{Binding SaveInterestsCommand}"
+            IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}" />
+
+        <!-- Loading Indicator -->
+        <ActivityIndicator 
+            Grid.Row="0"
+            Grid.RowSpan="2"
+            IsRunning="{Binding IsLoading}"
+            IsVisible="{Binding IsLoading}" />
+    </Grid>
+</ContentPage>

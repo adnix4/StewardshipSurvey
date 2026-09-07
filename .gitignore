@@ -367,3 +367,6 @@ appsettings.*.Local.json
 
 # Mail written to disk when no SMTP server is configured
 StewardshipSurvey/App_Data/
+
+# Local working notes - documents unfixed security issues, do not publish
+TODO.md

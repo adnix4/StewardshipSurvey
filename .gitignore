@@ -364,3 +364,6 @@ FodyWeavers.xsd
 
 # Local-only settings overrides (never commit credentials; use dotnet user-secrets)
 appsettings.*.Local.json
+
+# Mail written to disk when no SMTP server is configured
+StewardshipSurvey/App_Data/

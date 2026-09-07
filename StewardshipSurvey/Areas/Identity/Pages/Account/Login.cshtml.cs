@@ -127,6 +127,17 @@ namespace StewardshipSurvey.Areas.Identity.Pages.Account
                     _logger.LogWarning("User account locked out.");
                     return RedirectToPage("./Lockout");
                 }
+                else if (result.IsNotAllowed)
+                {
+                    // RequireConfirmedAccount is on, so an unconfirmed address lands here.
+                    // Reporting it as "Invalid login attempt" left people with no idea why
+                    // their correct password was refused.
+                    _logger.LogInformation("Sign-in refused for an unconfirmed account.");
+                    ModelState.AddModelError(string.Empty,
+                        "You need to confirm your email address before signing in. " +
+                        "Use the resend confirmation link below if you did not receive the email.");
+                    return Page();
+                }
                 else
                 {
                     ModelState.AddModelError(string.Empty, "Invalid login attempt.");

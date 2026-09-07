@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
@@ -24,6 +25,13 @@ namespace StewardshipSurvey.Tests.Infrastructure
         private readonly SqliteConnection _connection =
             new SqliteConnection("DataSource=:memory:;Foreign Keys=True");
 
+        /// <summary>
+        /// Where the file-drop email sender writes during this run. Per-factory so parallel
+        /// test classes cannot read each other's messages.
+        /// </summary>
+        public string MailDropPath { get; } =
+            Path.Combine(Path.GetTempPath(), "stewardship-tests", Guid.NewGuid().ToString("N"));
+
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
             // Not "Development". That environment runs AdminSeeder at startup, which hits the
@@ -31,6 +39,15 @@ namespace StewardshipSurvey.Tests.Infrastructure
             // It also turns on the developer exception page, which would hide real database
             // errors behind a 500 page instead of surfacing them.
             builder.UseEnvironment("Testing");
+
+            // No SMTP host, so the app selects FileDropEmailSender and confirmation messages
+            // land here where a test can read them.
+            builder.ConfigureAppConfiguration(config => config.AddInMemoryCollection(
+                new Dictionary<string, string?>
+                {
+                    ["Email:FileDropPath"] = MailDropPath,
+                    ["Email:Smtp:Host"] = null
+                }));
 
             builder.ConfigureServices(services =>
             {
@@ -171,6 +188,15 @@ namespace StewardshipSurvey.Tests.Infrastructure
             if (disposing)
             {
                 _connection.Dispose();
+
+                try
+                {
+                    if (Directory.Exists(MailDropPath)) Directory.Delete(MailDropPath, recursive: true);
+                }
+                catch (IOException)
+                {
+                    // A leftover temp directory is not worth failing a test run over.
+                }
             }
 
             base.Dispose(disposing);

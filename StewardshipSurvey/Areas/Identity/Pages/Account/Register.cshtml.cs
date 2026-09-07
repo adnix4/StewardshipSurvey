@@ -142,8 +142,27 @@ namespace StewardshipSurvey.Areas.Identity.Pages.Account
                         values: new { area = "Identity", userId = userId, code = code, returnUrl = returnUrl },
                         protocol: Request.Scheme);
 
-                    await _emailSender.SendEmailAsync(Input.Email, "Confirm your email",
-                        $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+                    try
+                    {
+                        await _emailSender.SendEmailAsync(Input.Email, "Confirm your email",
+                            $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
+                    }
+                    catch (Exception ex)
+                    {
+                        // The account cannot be confirmed without this email, so registration
+                        // has not really succeeded. Remove the half-made account rather than
+                        // leaving one that can never be used and whose address is now taken.
+                        _logger.LogError(ex,
+                            "Confirmation email could not be sent; rolling back registration for {Email}.",
+                            Input.Email);
+
+                        await _userManager.DeleteAsync(user);
+
+                        ModelState.AddModelError(string.Empty,
+                            "We could not send your confirmation email, so your account was not created. " +
+                            "Please try again later, or contact the church office.");
+                        return Page();
+                    }
 
                     if (_userManager.Options.SignIn.RequireConfirmedAccount)
                     {

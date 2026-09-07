@@ -42,6 +42,27 @@ dotnet user-secrets set "SeedAccounts:VolunteerOrganizer:Password" "<choose a pa
 dotnet user-secrets set "Jwt:Key" ([Convert]::ToBase64String((1..48 | ForEach-Object { Get-Random -Maximum 256 })))
 ```
 
+### Email
+
+Registration requires the new account to confirm its email address. If no SMTP server is
+configured the app writes each message to `App_Data/mail` as a `.eml` file and logs the
+confirmation link, so the flow works end to end on a machine with no mail server. In
+Development the confirmation link is also shown on the registration confirmation page; it is
+never shown in any other environment.
+
+To send real mail, set the SMTP details and the app switches sender automatically:
+
+```powershell
+dotnet user-secrets set "Email:From"           "noreply@yourdomain"
+dotnet user-secrets set "Email:Smtp:Host"      "smtp.yourprovider.com"
+dotnet user-secrets set "Email:Smtp:Port"      "587"
+dotnet user-secrets set "Email:Smtp:User"      "<smtp username>"
+dotnet user-secrets set "Email:Smtp:Password"  "<smtp password>"
+```
+
+A send failure is logged as an error and rethrown rather than swallowed - a confirmation
+email that silently vanishes is exactly the bug this replaced.
+
 Then `dotnet run`. On startup `AdminSeeder` creates the four roles and any seed accounts
 it finds in configuration. Seeding is **Development only** — a real deployment provisions
 its administrator separately.

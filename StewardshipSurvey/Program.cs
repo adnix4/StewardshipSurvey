@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using StewardshipSurvey.Data;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using StewardshipSurvey.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +17,21 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.R
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
 builder.Services.AddRazorPages();
+
+// Outgoing mail. AddDefaultIdentity registers NoOpEmailSender with TryAddTransient, which
+// silently discarded every confirmation email; registering here afterwards replaces it.
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SectionName));
+
+var smtpHost = builder.Configuration[$"{EmailOptions.SectionName}:Smtp:Host"];
+if (string.IsNullOrWhiteSpace(smtpHost))
+{
+    // No mail server configured: write .eml files to disk rather than pretend to send.
+    builder.Services.AddTransient<IEmailSender, FileDropEmailSender>();
+}
+else
+{
+    builder.Services.AddTransient<IEmailSender, SmtpEmailSender>();
+}
 
 // Retention policy for deactivated accounts, plus the sweep that enforces it.
 builder.Services.Configure<UserRetentionOptions>(
@@ -71,7 +87,14 @@ builder.Services.AddScoped<HttpClient>(provider =>
 
 var app = builder.Build();
 
-// Seed roles and development accounts. Development only - a real deployment
+// Roles must exist in every environment. AddToRoleAsync throws on a missing role, so
+// registration would fail outright wherever the development seeder does not run.
+using (var scope = app.Services.CreateScope())
+{
+    await AdminSeeder.EnsureRolesAsync(scope.ServiceProvider);
+}
+
+// Development accounts and the confirmation backfill. Development only - a real deployment
 // provisions its administrator separately, not from application startup.
 if (app.Environment.IsDevelopment())
 {

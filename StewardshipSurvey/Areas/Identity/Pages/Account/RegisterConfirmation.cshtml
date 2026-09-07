@@ -1,0 +1,32 @@
+@page
+@model RegisterConfirmationModel
+@{
+    ViewData["Title"] = "Register confirmation";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<p>
+    We have sent a confirmation link to <strong>@Model.Email</strong>.
+    Follow it to finish setting up your account, then sign in.
+</p>
+
+<p class="text-muted">
+    If it does not arrive, check your junk folder, or
+    <a asp-page="./ResendEmailConfirmation">request another confirmation email</a>.
+</p>
+
+@if (Model.ShowConfirmationLink)
+{
+    <div class="alert alert-warning mt-4">
+        <h5 class="alert-heading">Development only</h5>
+        <p>
+            This link is shown because the app is running in Development. It is never
+            rendered in any other environment &mdash; otherwise anyone registering could
+            confirm their own address, and confirming would prove nothing.
+        </p>
+        <p class="mb-0">
+            <a id="confirm-link" href="@Model.ConfirmationUrl">Confirm this account</a>
+        </p>
+    </div>
+}

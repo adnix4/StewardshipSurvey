@@ -5,23 +5,32 @@ namespace StewardshipSurvey.Data
 {
     public class AdminSeeder
     {
-        public static async Task SeedAsync(IServiceProvider serviceProvider)
+        /// <summary>
+        /// Creates any missing Identity roles. Runs in every environment: roles are part of
+        /// the application's structure, not development seed data, and
+        /// <c>UserManager.AddToRoleAsync</c> throws when a role is absent - so without this,
+        /// registration fails outright anywhere the development seeder does not run.
+        /// </summary>
+        public static async Task EnsureRolesAsync(IServiceProvider serviceProvider)
         {
-            var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
             var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-            var configuration = serviceProvider.GetRequiredService<IConfiguration>();
-            var logger = serviceProvider.GetRequiredService<ILogger<AdminSeeder>>();
 
-            string[] roles = Roles.All;
-
-            // Create role if it doesn't exist
-            foreach (var role in roles)
+            foreach (var role in Roles.All)
             {
                 if (!await roleManager.RoleExistsAsync(role))
                 {
                     await roleManager.CreateAsync(new IdentityRole(role));
                 }
             }
+        }
+
+        public static async Task SeedAsync(IServiceProvider serviceProvider)
+        {
+            var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+            var logger = serviceProvider.GetRequiredService<ILogger<AdminSeeder>>();
+
+            string[] roles = Roles.All;
 
             // Seed account credentials come from configuration (user secrets in Development),
             // never from source. Keyed by role name, e.g. "SeedAccounts:Admin:Email".
@@ -89,6 +98,8 @@ namespace StewardshipSurvey.Data
             // role. Backfill it for anyone missing it, including the seed accounts above.
             var users = userManager.Users.ToList();
 
+            var confirmedByBackfill = 0;
+
             foreach (var user in users)
             {
                 var assignedRoles = await userManager.GetRolesAsync(user);
@@ -97,6 +108,22 @@ namespace StewardshipSurvey.Data
                 {
                     await userManager.AddToRoleAsync(user, Roles.RegisteredUser);
                 }
+
+                // Accounts created before email confirmation was enforceable would otherwise
+                // be locked out by a bug that was never theirs. One-time, Development only.
+                if (!user.EmailConfirmed)
+                {
+                    user.EmailConfirmed = true;
+                    await userManager.UpdateAsync(user);
+                    confirmedByBackfill++;
+                }
+            }
+
+            if (confirmedByBackfill > 0)
+            {
+                logger.LogInformation(
+                    "Confirmed {Count} account(s) that predate email confirmation being enforced.",
+                    confirmedByBackfill);
             }
 
         }

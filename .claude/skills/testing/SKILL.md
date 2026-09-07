@@ -63,6 +63,9 @@ The factory gives you:
   client holding a genuine auth cookie.
 - `WithScopeAsync(provider => ...)` — a fresh DI scope for arranging or asserting against
   the database.
+- `MailDropPath` — the temp directory this factory's `FileDropEmailSender` writes to, one per
+  factory instance so parallel test classes cannot read each other's messages. Deleted on
+  dispose.
 
 **Generate unique emails per test.** The fixture is shared across a class, so the database is
 shared too. A hardcoded address collides the moment a second test uses it.
@@ -94,9 +97,27 @@ Each of these cost real time to find. They are handled inside the factory — do
 - **`Models/DbContext.cs` is an empty stub class** that shadows
   `Microsoft.EntityFrameworkCore.DbContext`. A test file with `using StewardshipSurvey.Models;`
   but no `using Microsoft.EntityFrameworkCore;` gets a baffling compile error.
-- **Registration cannot complete.** `RequireConfirmedAccount = true` with no email sender
-  means a self-registered user can never sign in. Use `CreateUserAsync`, which sets
-  `EmailConfirmed = true`, rather than posting the registration form.
+- **Registration completes, but only through the emailed link.** `RequireConfirmedAccount =
+  true`, so a newly registered account cannot sign in until its address is confirmed. The
+  factory configures no SMTP host, so the app selects `FileDropEmailSender` and writes the
+  confirmation message to `MailDropPath` — a test can read it and follow the link.
+  `RegistrationTests` does exactly that, end to end.
+  Use `CreateUserAsync` (which sets `EmailConfirmed = true`) when a test just needs an
+  account. Post the registration form only when registration itself is what is under test.
+
+## Provoking a failure
+
+There are no interfaces to stub, so "what happens when the database misbehaves" has to be
+provoked against the real one. Two ways are in use, in order of preference:
+
+- **Post an id that does not exist.** `SurveySaveFailureTests` sends an `InterestAreaID` of
+  999999; the foreign key rejects it on `SaveChanges`. Nothing about the schema changes, so
+  this is safe in a class that shares its fixture.
+- **Rename a table out of the way** for the length of one request, and back in a `finally`:
+  `ALTER TABLE "InterestAreas" RENAME TO "InterestAreas_hidden"`. This is schema damage, so
+  keep it in a class of its own — every test class gets its own fixture and therefore its own
+  SQLite database — and never in a class that also asserts on normal behaviour.
+  `SurveyLoadFailureTests` is the example.
 
 ## Reaching private helpers
 

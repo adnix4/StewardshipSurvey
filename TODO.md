@@ -6,7 +6,8 @@ can go straight to the code without re-deriving anything.
 Ticked items are kept rather than deleted: what was wrong and why it was wrong is the
 useful part, and several of these were found while fixing something else.
 
-State: `main`, 106 tests, 0 warnings, CI green. **Section 1 is empty.**
+State: `main`, 106 tests, 0 warnings, CI green. **Sections 1 and 2 are clear except for the
+MAUI bearer-auth item.**
 
 ---
 
@@ -117,11 +118,14 @@ State: `main`, 106 tests, 0 warnings, CI green. **Section 1 is empty.**
   Note: `OnPostAsync` on `SelectMemberServiceRoles` still has no prospective-member guard —
   see the new item in section 3. It was out of scope here and predates this change.
 
-- [ ] **The testing skill contradicts the code.**
-  `.claude/skills/testing/SKILL.md:97`
-  Still says registration cannot complete and warns against posting the registration form —
-  which is exactly what `StewardshipSurvey.Tests/Integration/RegistrationTests.cs` now does.
-  Stale since the email-confirmation fix.
+- [x] ~~**The testing skill contradicts the code.**~~ Fixed. The registration entry now
+  describes what actually happens: registration completes, `RequireConfirmedAccount = true`
+  means the account cannot sign in until confirmed, and the factory's `FileDropEmailSender`
+  writes the message where a test can read it — which is what `RegistrationTests` does.
+  `CreateUserAsync` is still the right default; posting the form is for testing registration
+  itself. Also added `MailDropPath` to the factory's documented surface, and a "Provoking a
+  failure" section recording the two techniques the new survey tests use — including that the
+  table-rename one is schema damage and must stay in a class of its own.
 
 - [x] ~~Merge `feature/email-confirmation` into `main` and delete the branch.~~ Done: merged
   fast-forward to `6de5cc0`, branch deleted locally and on the remote, CI green on `main`.

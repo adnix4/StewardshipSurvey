@@ -153,7 +153,7 @@ namespace StewardshipSurvey.Pages.Admin
         /// account you are signed in as, or the last usable Admin, would lock the site's
         /// administration away from everyone.
         /// </summary>
-        private async Task<string?> DeactivationBlockedReasonAsync(ApplicationUser user)
+        internal async Task<string?> DeactivationBlockedReasonAsync(ApplicationUser user)
         {
             if (user.DeactivatedDate != null)
             {

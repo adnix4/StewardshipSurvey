@@ -111,3 +111,7 @@ app.MapRazorPages();
 app.MapControllers();
 
 app.Run();
+
+// Exposes the implicit Program class to the test project so WebApplicationFactory<Program>
+// can boot the real application. Top-level statements otherwise generate it as internal.
+public partial class Program { }

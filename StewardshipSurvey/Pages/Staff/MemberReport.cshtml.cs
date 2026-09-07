@@ -192,10 +192,10 @@ namespace StewardshipSurvey.Pages.Staff
 
         // RFC 4180: wrap every field in quotes and double any quote inside it, so a
         // name or comment containing a quote cannot break the row's column alignment.
-        private static string CsvField(string? value) =>
+        internal static string CsvField(string? value) =>
             $"\"{(value ?? string.Empty).Replace("\"", "\"\"")}\"";
 
-        private List<int> ParseIntList(string commaSeparatedValues)
+        internal List<int> ParseIntList(string commaSeparatedValues)
         {
             if (string.IsNullOrEmpty(commaSeparatedValues))
                 return new List<int>();

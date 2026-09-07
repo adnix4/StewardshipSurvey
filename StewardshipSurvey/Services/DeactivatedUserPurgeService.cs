@@ -61,7 +61,7 @@ namespace StewardshipSurvey.Services
             }
         }
 
-        private async Task PurgeAsync(CancellationToken cancellationToken)
+        internal async Task PurgeAsync(CancellationToken cancellationToken)
         {
             // This service is a singleton; UserManager and the DbContext are scoped.
             using var scope = _scopeFactory.CreateScope();

@@ -9,20 +9,10 @@ namespace TestUserLogIn.Data
         {
             var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
             var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+            var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+            var logger = serviceProvider.GetRequiredService<ILogger<AdminSeeder>>();
 
             string[] roles = { "Admin", "Staff", "VolunteerOrganizer", "RegisteredUser" };
-            //string memberRole = "Member";
-            string adminEmail = "admin@yahoo.com";
-            string adminPassword = "P@ssword1!#";
-            string staffEmail = "staff@yahoo.com";
-            string password = "P@ssword2!#";
-            string volunteerOrganizerEmail = "vol@yahoo.com";            
-
-            // Create Member role if it doesn't exist
-            //if (!await roleManager.RoleExistsAsync(memberRole))
-            //{
-            //    await roleManager.CreateAsync(new IdentityRole(memberRole));
-            //}
 
             // Create role if it doesn't exist
             foreach (var role in roles)
@@ -33,61 +23,68 @@ namespace TestUserLogIn.Data
                 }
             }
 
+            // Seed account credentials come from configuration (user secrets in Development),
+            // never from source. Keyed by role name, e.g. "SeedAccounts:Admin:Email".
+            var seedAccounts = configuration
+                .GetSection(SeedAccountOptions.SectionName)
+                .Get<Dictionary<string, SeedAccountOptions>>();
 
-            // Create admin user if it doesn't exist
-            var adminUser = await userManager.FindByEmailAsync(adminEmail);
-            if (adminUser == null)
+            if (seedAccounts == null || seedAccounts.Count == 0)
             {
-                adminUser = new ApplicationUser { UserName = adminEmail, Email = adminEmail, EmailConfirmed = true };
-                //await userManager.CreateAsync(adminUser, adminPassword);
-                var result = await userManager.CreateAsync(adminUser, adminPassword);
-                if (!result.Succeeded)
+                logger.LogWarning(
+                    "No {Section} configured - skipping seed account creation. To create them, run " +
+                    "'dotnet user-secrets set \"{Section}:Admin:Email\" \"<email>\"' (and :Password) " +
+                    "from the TestUserLogIn project folder. See README.md.",
+                    SeedAccountOptions.SectionName,
+                    SeedAccountOptions.SectionName);
+            }
+            else
+            {
+                foreach (var (role, account) in seedAccounts)
                 {
-                    var errors = string.Join("; ", result.Errors.Select(e => e.Description));
-                    throw new Exception("Admin user creation failed: " + errors);
-                }
+                    if (!roles.Contains(role))
+                    {
+                        logger.LogWarning(
+                            "Seed account is configured for unknown role '{Role}' - skipping.", role);
+                        continue;
+                    }
 
+                    if (string.IsNullOrWhiteSpace(account.Email) || string.IsNullOrWhiteSpace(account.Password))
+                    {
+                        logger.LogWarning(
+                            "Seed account for role '{Role}' is missing an email or password - skipping.", role);
+                        continue;
+                    }
+
+                    // Create the user if it doesn't exist
+                    var user = await userManager.FindByEmailAsync(account.Email);
+                    if (user == null)
+                    {
+                        user = new ApplicationUser
+                        {
+                            UserName = account.Email,
+                            Email = account.Email,
+                            EmailConfirmed = true
+                        };
+
+                        var result = await userManager.CreateAsync(user, account.Password);
+                        if (!result.Succeeded)
+                        {
+                            var errors = string.Join("; ", result.Errors.Select(e => e.Description));
+                            throw new Exception($"Seed account creation failed for role '{role}': {errors}");
+                        }
+
+                        logger.LogInformation("Created seed account for role '{Role}'.", role);
+                    }
+
+                    // Assign the user to its role
+                    if (!await userManager.IsInRoleAsync(user, role))
+                    {
+                        await userManager.AddToRoleAsync(user, role);
+                    }
+                }
             }
 
-            // Assign user to Admin role
-            if (!await userManager.IsInRoleAsync(adminUser, "Admin"))
-            {
-                await userManager.AddToRoleAsync(adminUser, "Admin");
-            }
-            // Create staff user if it doesn't exist
-            var staffUser = await userManager.FindByEmailAsync(staffEmail);
-            if (staffUser == null)
-            {
-                staffUser = new ApplicationUser { UserName = staffEmail, Email = staffEmail, EmailConfirmed = true };
-                var result = await userManager.CreateAsync(staffUser, password);
-                if (!result.Succeeded)
-                {
-                    var errors = string.Join("; ", result.Errors.Select(e => e.Description));
-                    throw new Exception("Staff user creation failed: " + errors);
-                }
-            }
-            // Assign user to Staff role
-            if (!await userManager.IsInRoleAsync(staffUser, "Staff"))
-            {
-                await userManager.AddToRoleAsync(staffUser, "Staff");
-            }
-            // Create volunteer organizer user if it doesn't exist
-            var volunteerOrganizerUser = await userManager.FindByEmailAsync(volunteerOrganizerEmail);
-            if (volunteerOrganizerUser == null)
-            {
-                volunteerOrganizerUser = new ApplicationUser { UserName = volunteerOrganizerEmail, Email = volunteerOrganizerEmail, EmailConfirmed = true };
-                var result = await userManager.CreateAsync(volunteerOrganizerUser, password);
-                if (!result.Succeeded)
-                {
-                    var errors = string.Join("; ", result.Errors.Select(e => e.Description));
-                    throw new Exception("Volunteer Organizer user creation failed: " + errors);
-                }
-            }
-            // Assign user to VolunteerOrganizer role
-            if (!await userManager.IsInRoleAsync(volunteerOrganizerUser, "VolunteerOrganizer"))
-            {
-                await userManager.AddToRoleAsync(volunteerOrganizerUser, "VolunteerOrganizer");
-            }
             // Assign any unassigned user to RegisteredUser role
             var users = userManager.Users.ToList();
 

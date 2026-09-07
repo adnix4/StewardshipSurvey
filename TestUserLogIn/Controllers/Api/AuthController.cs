@@ -65,6 +65,13 @@ namespace TestUserLogIn.Controllers.Api
                     message = "Login successful"
                 });
             }
+            catch (InvalidOperationException ex)
+            {
+                // Server misconfiguration (e.g. missing Jwt:Key). The message names a
+                // configuration key, not a secret, so it is safe to return.
+                _logger.LogError(ex, "JWT configuration error during login");
+                return StatusCode(500, new { message = ex.Message });
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error during login for {request.Email}");
@@ -74,9 +81,26 @@ namespace TestUserLogIn.Controllers.Api
 
         private string GenerateJwtToken(ApplicationUser user)
         {
-            var jwtKey = _configuration["Jwt:Key"] ?? "your-secret-key-at-least-32-characters-long";
-            var jwtIssuer = _configuration["Jwt:Issuer"] ?? "YourAppName";
-            var jwtAudience = _configuration["Jwt:Audience"] ?? "YourAppUsers";
+            // The signing key is a secret and has no fallback - a hardcoded default would
+            // let anyone with the source mint valid tokens. Issuer and audience are not secrets.
+            var jwtKey = _configuration["Jwt:Key"];
+            if (string.IsNullOrWhiteSpace(jwtKey))
+            {
+                throw new InvalidOperationException(
+                    "Jwt:Key is not configured. From the TestUserLogIn project folder, run: " +
+                    "dotnet user-secrets set \"Jwt:Key\" \"<random value of at least 32 characters>\". " +
+                    "See README.md.");
+            }
+
+            // HmacSha256 requires a key of at least 256 bits; a shorter one fails with an opaque IDX10603.
+            if (Encoding.UTF8.GetByteCount(jwtKey) < 32)
+            {
+                throw new InvalidOperationException(
+                    "Jwt:Key must be at least 32 bytes (256 bits) for HMAC-SHA256 signing.");
+            }
+
+            var jwtIssuer = _configuration["Jwt:Issuer"] ?? "TestUserLogIn";
+            var jwtAudience = _configuration["Jwt:Audience"] ?? "TestUserLogInUsers";
 
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);

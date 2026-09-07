@@ -361,3 +361,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Local-only settings overrides (never commit credentials; use dotnet user-secrets)
+appsettings.*.Local.json

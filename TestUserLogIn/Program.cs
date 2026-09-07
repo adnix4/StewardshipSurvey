@@ -65,10 +65,15 @@ builder.Services.AddScoped<HttpClient>(provider =>
 
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
+// Seed roles and development accounts. Development only - a real deployment
+// provisions its administrator separately, not from application startup.
+if (app.Environment.IsDevelopment())
 {
-    var services = scope.ServiceProvider;
-    await AdminSeeder.SeedAsync(services);
+    using (var scope = app.Services.CreateScope())
+    {
+        var services = scope.ServiceProvider;
+        await AdminSeeder.SeedAsync(services);
+    }
 }
 
 // Configure the HTTP request pipeline.

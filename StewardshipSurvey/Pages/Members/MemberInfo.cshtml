@@ -138,6 +138,29 @@
                 </div>
             </div>
 
+            <!-- Membership Status -->
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Membership Status</label>
+                <p class="text-muted small">Are you a member of St. Mark, or considering membership?</p>
+
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" asp-for="MemberDetails.MembershipStatus"
+                           id="statusMember" value="@MembershipStatus.Member" />
+                    <label class="form-check-label" for="statusMember">
+                        <i class="bi bi-person-check"></i> Member
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" asp-for="MemberDetails.MembershipStatus"
+                           id="statusProspective" value="@MembershipStatus.ProspectiveMember" />
+                    <label class="form-check-label" for="statusProspective">
+                        <i class="bi bi-person-plus"></i> Prospective Member
+                    </label>
+                </div>
+                <span asp-validation-for="MemberDetails.MembershipStatus" class="text-danger"></span>
+            </div>
+
             <!-- Contact Preferences - Using hidden input + visible radio buttons -->
             <div class="mb-3">
                 <label class="form-label fw-semibold">Preferred Contact Method</label>

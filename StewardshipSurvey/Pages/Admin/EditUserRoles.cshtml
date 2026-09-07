@@ -10,17 +10,50 @@
 	<div class="card-body">
 		<h4 class="card-title mb-3">Select Roles</h4>	
 		<form method="post">
-			<div class="row"
+			<div class="row">
 			@foreach (var role in Model.Roles)
 			{
 				<div class="col-md-4 mb-2">
 					<div class="form-check">
-							<input class="form-check-input" type="checkbox" name="selectedRoles" value="@role.RoleName" id="role_@role.RoleName" @(role.Selected ? "checked" : "") />
-	                            <label class="form-check-label" for="role_@role.RoleName">@role.RoleName</label>
-	                        </div>
+							<input class="form-check-input" type="checkbox" name="selectedRoles" value="@role.RoleName" id="role_@role.RoleName" @(role.Selected ? "checked" : "") @(role.Locked ? "disabled" : "") />
+							<label class="form-check-label" for="role_@role.RoleName">
+								@role.RoleName
+								@if (role.Locked)
+								{
+									<span class="text-muted small">(all users)</span>
+								}
+							</label>
+						</div>
 				</div>
 			}
 			</div>
+			<hr class="my-4" />
+
+			<h4 class="card-title mb-3">Membership Status</h4>
+			@if (Model.HasProfile)
+			{
+				<p class="text-muted small">Drives the Member / ProspectiveMember roles above, and whether the person is asked where they currently serve.</p>
+				<div class="form-check">
+					<input class="form-check-input" type="radio" name="membershipStatus" id="statusMember"
+						   value="@MembershipStatus.Member" @(Model.MembershipStatus == MembershipStatus.Member ? "checked" : "") />
+					<label class="form-check-label" for="statusMember">Member</label>
+				</div>
+				<div class="form-check">
+					<input class="form-check-input" type="radio" name="membershipStatus" id="statusProspective"
+						   value="@MembershipStatus.ProspectiveMember" @(Model.MembershipStatus == MembershipStatus.ProspectiveMember ? "checked" : "") />
+					<label class="form-check-label" for="statusProspective">Prospective Member</label>
+				</div>
+				<div class="form-check">
+					<input class="form-check-input" type="radio" name="membershipStatus" id="statusNone"
+						   value="" @(Model.MembershipStatus == null ? "checked" : "") />
+					<label class="form-check-label" for="statusNone">Not specified</label>
+				</div>
+			}
+			else
+			{
+				<p class="text-muted">This person has not filled in their profile yet, so there is no membership status to set.</p>
+			}
+
 			<div class="mt-4">
 				<button type="submit" class="btn btn-primary me-2">
 				    <i class="bi bi-save"></i>	Save Changes

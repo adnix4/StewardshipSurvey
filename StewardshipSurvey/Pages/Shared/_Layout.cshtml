@@ -31,7 +31,7 @@
                         @* <li class="nav-item">
                             <a class="nav-link text-light" asp-area="" asp-page="/Privacy">Privacy</a>
                         </li> *@
-                        @if (User.IsInRole("Admin"))
+                        @if (User.IsInRole(Roles.Admin))
                         {
                             <li class="nav-item dropdown">
 								<a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown">Admin Areas</a>
@@ -45,7 +45,7 @@
 
 						}
 
-                        @if (User.IsInRole("Staff"))                        
+                        @if (User.IsInRole(Roles.Staff))                        
                         {
 
                             <li class="nav-item">
@@ -53,16 +53,28 @@
                             </li>
                         }
                         
-                        @if (User.IsInRole("VolunteerOrganizer"))
+                        @if (User.IsInRole(Roles.VolunteerOrganizer))
                         {
-                            <li class="nav-item">
-                                @* <a class="nav-link " asp-area="" asp-page="/MemberInfo">MemberInfo</a> *@
-                            </li>
+                            @* Placeholder - VolunteerOrganizer tools are a planned feature.
+                               Intentionally renders nothing until those pages exist; do not remove.
+                               <li class="nav-item">
+                                   <a class="nav-link" asp-area="" asp-page="/MemberInfo">MemberInfo</a>
+                               </li> *@
                         }
-                        @if (User.IsInRole("RegisteredUser"))
+                        @if (User.Identity?.IsAuthenticated == true)
                         {
-                            <li class="nav-item">
-                                <a class="nav-link" asp-page="/Members/MemberInfo">MemberInfo</a>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="mySurveyDropdown" role="button" data-bs-toggle="dropdown">My Survey</a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" asp-page="/Members/MemberInfo">My Info</a></li>
+                                    <li><a class="dropdown-item" asp-page="/Members/SelectInterests">Interests</a></li>
+                                    <li><a class="dropdown-item" asp-page="/Members/SelectMemberInvolvement">Involvement</a></li>
+                                    @if (!User.IsInRole(Roles.ProspectiveMember))
+                                    {
+                                        @* "Currently serving" does not apply to a prospective member. *@
+                                        <li><a class="dropdown-item" asp-page="/Members/SelectMemberServiceRoles">Service Roles</a></li>
+                                    }
+                                </ul>
                             </li>
 						}                       
                         
@@ -80,7 +92,7 @@
 
     <footer class="border-top footer text-muted mt-auto">
         <div class="container">
-            &copy; 2025 - St. Mark EC - <a asp-area="" asp-page="/Privacy">Privacy</a>
+            &copy; @DateTime.Now.Year - St. Mark EC - <a asp-area="" asp-page="/Privacy">Privacy</a>
         </div>
     </footer>
 

@@ -32,7 +32,15 @@ namespace StewardshipSurvey.Pages.Members
             try
             {
                 _logger.LogInformation("Loading SelectMemberServiceRoles page");
-                
+
+                // "Areas You Are Currently Serving In" does not apply to someone who is only
+                // considering membership. The nav hides it for them; this is the real guard.
+                if (await IsProspectiveMemberAsync())
+                {
+                    _logger.LogInformation("Prospective member redirected away from service roles");
+                    return RedirectToPage("/Members/MemberInfo");
+                }
+
                 // Get current user
                 var user = await _userManager.GetUserAsync(User);
                 if (user?.MemberID == null)
@@ -119,6 +127,24 @@ namespace StewardshipSurvey.Pages.Members
             // Reload data on error
             await OnGetAsync();
             return Page();
+        }
+
+        /// <summary>
+        /// True when the signed-in person has answered "Prospective Member" on their profile.
+        /// Reads MemberInfo rather than the mirrored role so a stale sign-in cookie cannot
+        /// grant access to a step the person should not see.
+        /// </summary>
+        private async Task<bool> IsProspectiveMemberAsync()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user?.MemberID == null) return false;
+
+            var status = await _context.MemberInfos
+                .Where(m => m.MemberID == user.MemberID)
+                .Select(m => m.MembershipStatus)
+                .FirstOrDefaultAsync();
+
+            return status == MembershipStatus.ProspectiveMember;
         }
     }
 }

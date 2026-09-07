@@ -108,7 +108,15 @@ namespace StewardshipSurvey.Pages.Members
                 await _context.SaveChangesAsync();
                 _logger.LogInformation("Involvements saved successfully to database");
 
-                return RedirectToPage("/Members/SelectMemberServiceRoles");
+                // A prospective member skips the "currently serving" step and closes the loop.
+                var status = await _context.MemberInfos
+                    .Where(m => m.MemberID == memberId)
+                    .Select(m => m.MembershipStatus)
+                    .FirstOrDefaultAsync();
+
+                return status == MembershipStatus.ProspectiveMember
+                    ? RedirectToPage("/Members/MemberInfo")
+                    : RedirectToPage("/Members/SelectMemberServiceRoles");
             }
             catch (Exception ex)
             {

@@ -12,7 +12,7 @@ namespace StewardshipSurvey.Data
             var configuration = serviceProvider.GetRequiredService<IConfiguration>();
             var logger = serviceProvider.GetRequiredService<ILogger<AdminSeeder>>();
 
-            string[] roles = { "Admin", "Staff", "VolunteerOrganizer", "RegisteredUser" };
+            string[] roles = Roles.All;
 
             // Create role if it doesn't exist
             foreach (var role in roles)
@@ -85,16 +85,17 @@ namespace StewardshipSurvey.Data
                 }
             }
 
-            // Assign any unassigned user to RegisteredUser role
+            // RegisteredUser is the catch-all every account holds, on top of any elevated
+            // role. Backfill it for anyone missing it, including the seed accounts above.
             var users = userManager.Users.ToList();
 
             foreach (var user in users)
             {
                 var assignedRoles = await userManager.GetRolesAsync(user);
 
-                if (!assignedRoles.Contains("RegisteredUser") && !assignedRoles.Contains("Admin") && !assignedRoles.Contains("Staff") && !assignedRoles.Contains("VolunteerOrganizer"))
+                if (!assignedRoles.Contains(Roles.RegisteredUser))
                 {
-                    await userManager.AddToRoleAsync(user, "RegisteredUser");
+                    await userManager.AddToRoleAsync(user, Roles.RegisteredUser);
                 }
             }
 

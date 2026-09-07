@@ -155,6 +155,7 @@ namespace StewardshipSurvey.Pages
                     existing.PrefersPhone = MemberDetails.PrefersPhone;
                     existing.PrefersEmail = MemberDetails.PrefersEmail;
                     existing.PrefersText = MemberDetails.PrefersText;
+                    existing.MembershipStatus = MemberDetails.MembershipStatus;
                     existing.UpdatedDate = DateTime.UtcNow;
 
                     _context.MemberInfos.Update(existing);
@@ -164,7 +165,10 @@ namespace StewardshipSurvey.Pages
 
                 await _context.SaveChangesAsync();
 
-                // Refresh claims so FirstName shows up in the nav bar.
+                // Keep the Member / ProspectiveMember roles in step with the saved status.
+                await MembershipStatusRoles.SyncAsync(_userManager, user, MemberDetails.MembershipStatus);
+
+                // Refresh claims so FirstName and the status roles show up in the nav bar.
                 await _signInManager.RefreshSignInAsync(user);
 
                 _logger.LogInformation("MemberInfo saved successfully for {User}", user.UserName);

@@ -57,6 +57,11 @@ namespace StewardshipSurvey.Models
 
         public string ApplicationUserID { get; set; } = string.Empty;
 
+        // Null until the person answers. Mirrored onto the Member / ProspectiveMember
+        // Identity roles when the profile is saved, so views and nav can check it cheaply.
+        [Display(Name = "Membership Status")]
+        public MembershipStatus? MembershipStatus { get; set; }
+
         [Display(Name = "Preffered Contact Method")]
         public bool PrefersPhone { get; set; }
         public bool PrefersEmail { get; set; }

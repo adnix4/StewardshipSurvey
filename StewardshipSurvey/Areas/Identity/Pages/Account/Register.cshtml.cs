@@ -123,7 +123,16 @@ namespace StewardshipSurvey.Areas.Identity.Pages.Account
                 {
                     _logger.LogInformation("User created a new account with password.");
 
-                    await _userManager.AddToRoleAsync(user, "RegisteredUser");
+                    // Every account that can sign in holds RegisteredUser.
+                    var roleResult = await _userManager.AddToRoleAsync(user, Roles.RegisteredUser);
+                    if (!roleResult.Succeeded)
+                    {
+                        _logger.LogWarning(
+                            "Could not add new account to the {Role} role: {Errors}",
+                            Roles.RegisteredUser,
+                            string.Join("; ", roleResult.Errors.Select(e => e.Description)));
+                    }
+
                     var userId = await _userManager.GetUserIdAsync(user);
                     var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
                     code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));

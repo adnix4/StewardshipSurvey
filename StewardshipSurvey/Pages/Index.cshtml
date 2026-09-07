@@ -29,7 +29,15 @@
         </h4>
 
         <p class="p-5">
-            <a asp-page="/Members/MemberInfo" class="btn btn-primary btn-md">Begin Survey &raquo;</a>
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <a asp-page="/Members/MemberInfo" class="btn btn-primary btn-md">Review My Survey &raquo;</a>
+            }
+            else
+            {
+                @* MemberInfo is [Authorize], so this sends a visitor through login first. *@
+                <a asp-page="/Members/MemberInfo" class="btn btn-primary btn-md">Begin Survey &raquo;</a>
+            }
             
         </p>
     </section>

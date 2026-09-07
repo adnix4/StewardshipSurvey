@@ -55,16 +55,36 @@ builder.Services.AddHostedService<DeactivatedUserPurgeService>();
 // Add Controllers for API
 builder.Services.AddControllers();
 
-// Add CORS policy
-builder.Services.AddCors(options =>
+// CORS, off unless origins are configured.
+//
+// This was AllowAnyOrigin + AllowAnyMethod + AllowAnyHeader on every request. Two things were
+// wrong with that. The only API client is the MAUI app, which is native: it sends no Origin
+// header, so CORS never applied to it and the policy bought nothing. And it could not have
+// served a browser client either, because AllowAnyOrigin cannot be combined with credentials
+// and this API authenticates by cookie.
+//
+// So the honest default is no CORS at all. To add a browser client, list its exact origins
+// under Cors:AllowedOrigins.
+const string CorsPolicyName = "ConfiguredOrigins";
+
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>() ?? Array.Empty<string>();
+
+if (allowedOrigins.Length > 0)
 {
-    options.AddPolicy("AllowAll", policy =>
+    builder.Services.AddCors(options =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        // AllowCredentials is what makes the cookie travel, and it is legal here only
+        // because the origins are explicit. Listing an origin therefore grants it
+        // authenticated access - so list one only if it is as trusted as this app.
+        options.AddPolicy(CorsPolicyName, policy => policy
+            .WithOrigins(allowedOrigins)
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials());
     });
-});
+}
 
 // Add IHttpContextAccessor to access current request context
 builder.Services.AddHttpContextAccessor();
@@ -134,10 +154,15 @@ else
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
-// Enable CORS
-app.UseCors("AllowAll");
-
 app.UseRouting();
+
+// UseCors has to sit after UseRouting and before UseAuthorization. It used to run before
+// UseRouting, where no endpoint has been selected yet, so the endpoint's CORS metadata was
+// not available and the policy did nothing even where it was meant to apply.
+if (allowedOrigins.Length > 0)
+{
+    app.UseCors(CorsPolicyName);
+}
 
 app.UseAuthentication();
 app.UseAuthorization();

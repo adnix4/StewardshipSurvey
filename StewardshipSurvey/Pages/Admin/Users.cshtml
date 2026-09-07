@@ -1,0 +1,185 @@
+﻿@page
+@model StewardshipSurvey.Pages.Admin.UsersModel
+@{
+    ViewData["Title"] = "Users";
+}
+
+<h2 class="mb-4">User Management</h2>
+
+<!-- Tabs for Active / Deactivated -->
+<ul class="nav nav-tabs mb-3" id="userTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="active-tab" data-bs-toggle="tab" data-bs-target="#active" type="button" role="tab">
+            Active (@Model.ActiveUsers.Count())
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="deactivated-tab" data-bs-toggle="tab" data-bs-target="#deactivated" type="button" role="tab">
+            Deactivated (@Model.DeactivatedUsers.Count())
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content">
+    <div class="tab-pane fade show active" id="active" role="tabpanel">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 20%">Name</th>
+                            <th style="width: 25%">Email</th>
+                            <th style="width: 35%">Roles</th>
+                            <th style="width: 20%" class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @if (!Model.ActiveUsers.Any())
+                    {
+                        <tr><td colspan="4" class="text-center text-muted">No active users.</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var user in Model.ActiveUsers)
+                        {
+                            <tr>
+                                <td>@($"{user.FirstName} {user.LastName}")</td>
+                                <td>@user.Email</td>
+                                <td>
+                                    <ul class="mb-0 ps-3">
+                                        @foreach (var role in user.Roles)
+                                        {
+                                            <li>@role</li>
+                                        }
+                                    </ul>
+                                </td>
+                                <td class="text-center">
+                                    <a asp-page="/Admin/EditUser" asp-route-id="@user.UserId" class="btn btn-warning btn-sm">
+                                        <i class="bi bi-pencil-square"></i> Manage
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="deactivated" role="tabpanel">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <p class="text-muted small">
+                    Deactivated accounts cannot sign in and do not appear on the Member Report.
+                    They are deleted permanently, along with their survey answers, on the purge date.
+                </p>
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 18%">Name</th>
+                            <th style="width: 22%">Email</th>
+                            <th style="width: 15%">Deactivated</th>
+                            <th style="width: 15%">Purges on</th>
+                            <th style="width: 15%">Roles removed</th>
+                            <th style="width: 15%" class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @if (!Model.DeactivatedUsers.Any())
+                    {
+                        <tr><td colspan="6" class="text-center text-muted">No deactivated users.</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var user in Model.DeactivatedUsers)
+                        {
+                            <tr>
+                                <td>@($"{user.FirstName} {user.LastName}")</td>
+                                <td>@user.Email</td>
+                                <td>@user.DeactivatedDate?.ToString("yyyy-MM-dd")</td>
+                                <td>
+                                    @if (user.PurgeDate.HasValue)
+                                    {
+                                        @user.PurgeDate.Value.ToString("yyyy-MM-dd")
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Never</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (user.RememberedRoles.Any())
+                                    {
+                                        @string.Join(", ", user.RememberedRoles)
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">None</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (user.RememberedRoles.Any())
+                                    {
+                                        <button type="button" class="btn btn-success btn-sm"
+                                                data-bs-toggle="modal" data-bs-target="#reactivate-@user.UserId">
+                                            <i class="bi bi-arrow-counterclockwise"></i> Reactivate
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        @* Nothing was removed, so there is no choice to make. *@
+                                        <form method="post" asp-page-handler="Reactivate" asp-route-id="@user.UserId" class="d-inline">
+                                            <input type="hidden" name="restoreRoles" value="false" />
+                                            <button type="submit" class="btn btn-success btn-sm">
+                                                <i class="bi bi-arrow-counterclockwise"></i> Reactivate
+                                            </button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* One dialog per deactivated user that has roles to restore. Both buttons post to the same
+   handler with a different restoreRoles value, so the choice is applied server-side. *@
+@foreach (var user in Model.DeactivatedUsers.Where(u => u.RememberedRoles.Any()))
+{
+    <div class="modal fade" id="reactivate-@user.UserId" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Reactivate @user.Email</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>This account had the following roles removed when it was deactivated:</p>
+                    <ul>
+                        @foreach (var role in user.RememberedRoles)
+                        {
+                            <li><strong>@role</strong></li>
+                        }
+                    </ul>
+                    <p class="mb-0">Restore them, or bring the account back without them?</p>
+                </div>
+                <div class="modal-footer">
+                    <form method="post" asp-page-handler="Reactivate" asp-route-id="@user.UserId" class="d-inline">
+                        <input type="hidden" name="restoreRoles" value="true" />
+                        <button type="submit" class="btn btn-success">Restore roles</button>
+                    </form>
+                    <form method="post" asp-page-handler="Reactivate" asp-route-id="@user.UserId" class="d-inline">
+                        <input type="hidden" name="restoreRoles" value="false" />
+                        <button type="submit" class="btn btn-outline-secondary">Reactivate without roles</button>
+                    </form>
+                    <button type="button" class="btn btn-link" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}

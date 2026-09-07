@@ -1,10 +1,12 @@
 ﻿@page 
-@model StewardshipSurvey.Pages.Admin.EditUserRolesModel
+@model StewardshipSurvey.Pages.Admin.EditUserModel
 @{
-	ViewData["Title"] = "Edit User Roles";
+	ViewData["Title"] = "Edit User";
 }
 
-<h2 class=" mb-4">Edit Roles for @Model.CurrentUser?.Email</h2>
+<h2 class=" mb-4">Edit User — @Model.CurrentUser?.Email</h2>
+
+<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
 <div class="card shadow-sm mb-4">
 	<div class="card-body">
@@ -58,10 +60,56 @@
 				<button type="submit" class="btn btn-primary me-2">
 				    <i class="bi bi-save"></i>	Save Changes
 					</button>
-				<a asp-page="/Admin/UserRoles" class="btn btn-secondary">
+				<a asp-page="/Admin/Users" class="btn btn-secondary">
 					<i class="bi bi-x-circle"></i>Cancel
 				</a>
 			</div>						
 		</form>
+	</div>
+</div>
+
+<div class="card shadow-sm mb-4 border-danger">
+	<div class="card-body">
+		<h4 class="card-title text-danger mb-3">Danger zone</h4>
+
+		@if (Model.CannotDeactivate)
+		{
+			<p class="text-muted mb-0">
+				<i class="bi bi-shield-lock"></i> @Model.CannotDeactivateReason
+			</p>
+		}
+		else
+		{
+			<p class="text-muted">
+				Deactivating blocks sign-in, removes this person from the Member Report and takes away
+				their Admin, Staff and Volunteer Organizer roles. Their survey answers are kept, and an
+				administrator can reactivate them. Accounts left deactivated are deleted permanently
+				after the retention period.
+			</p>
+
+			<form method="post" asp-page-handler="Deactivate" asp-route-id="@Model.CurrentUser?.Id">
+				@if (Model.TargetIsAdmin)
+				{
+					<div class="alert alert-warning">
+						<strong>@Model.CurrentUser?.Email holds the Admin role.</strong>
+						Type their email address to confirm.
+					</div>
+					<div class="mb-3">
+						<input type="text" name="confirmEmail" class="form-control" autocomplete="off"
+							   placeholder="@Model.CurrentUser?.Email" />
+					</div>
+					<button type="submit" class="btn btn-danger">
+						<i class="bi bi-person-slash"></i> Deactivate this Admin
+					</button>
+				}
+				else
+				{
+					<button type="submit" class="btn btn-danger"
+							onclick="return confirm('Deactivate @Model.CurrentUser?.Email? They will not be able to sign in until an administrator reactivates them.');">
+						<i class="bi bi-person-slash"></i> Deactivate this user
+					</button>
+				}
+			</form>
+		}
 	</div>
 </div>

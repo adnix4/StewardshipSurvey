@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using StewardshipSurvey.Data;
+using StewardshipSurvey.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +16,11 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.R
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
 builder.Services.AddRazorPages();
+
+// Retention policy for deactivated accounts, plus the sweep that enforces it.
+builder.Services.Configure<UserRetentionOptions>(
+    builder.Configuration.GetSection(UserRetentionOptions.SectionName));
+builder.Services.AddHostedService<DeactivatedUserPurgeService>();
 
 // Add Controllers for API
 builder.Services.AddControllers();

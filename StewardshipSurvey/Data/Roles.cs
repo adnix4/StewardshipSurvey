@@ -29,5 +29,12 @@ namespace StewardshipSurvey.Data
         /// The Edit Roles screen shows these read-only.
         /// </summary>
         public static readonly string[] StatusMirrored = { Member, ProspectiveMember };
+
+        /// <summary>
+        /// Roles an administrator grants deliberately, as opposed to the catch-all and the
+        /// status-mirrored roles. These are the ones stripped and remembered when an account
+        /// is deactivated.
+        /// </summary>
+        public static readonly string[] Elevated = { Admin, Staff, VolunteerOrganizer };
     }
 }

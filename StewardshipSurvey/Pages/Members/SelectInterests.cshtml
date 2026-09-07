@@ -18,35 +18,54 @@
 
 <h2 class="mb-4">Select the areas and Items that interest you most.</h2>
 
-<form method="post">
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <div class="row">
-                @foreach (var interest in Model.AllInterests)
-                {
-                    <div class="col-md-6 mb-2">
-                        <div class="form-check">
-                            <input class="form-check-input"
-                                   type="checkbox"
-                                   name="SelectedInterestIds"
-                                   value="@interest.InterestAreaID"
-                                   id="interest_@interest.InterestAreaID"
-                                   @(Model.SelectedInterestIds.Contains(interest.InterestAreaID) ? "checked" : "") />
-                            <label class="form-check-label fw-semibold" for="interest_@interest.InterestAreaID">
-                                @interest.InterestArea
-                            </label>
-                            @if (!string.IsNullOrEmpty(interest.Description))
-                            {
-                                <div class="text-muted small">@interest.Description</div>
-                            }
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger" id="validationSummary">
+        <ul class="mb-0">
+            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <li>@error.ErrorMessage</li>
+            }
+        </ul>
+    </div>
+}
+
+@*
+    No form when the page could not load. An empty checkbox list looks exactly like
+    "I unticked everything", and submitting it would delete the answers already saved.
+*@
+@if (!Model.LoadFailed)
+{
+    <form method="post">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <div class="row">
+                    @foreach (var interest in Model.AllInterests)
+                    {
+                        <div class="col-md-6 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       name="SelectedInterestIds"
+                                       value="@interest.InterestAreaID"
+                                       id="interest_@interest.InterestAreaID"
+                                       @(Model.SelectedInterestIds.Contains(interest.InterestAreaID) ? "checked" : "") />
+                                <label class="form-check-label fw-semibold" for="interest_@interest.InterestAreaID">
+                                    @interest.InterestArea
+                                </label>
+                                @if (!string.IsNullOrEmpty(interest.Description))
+                                {
+                                    <div class="text-muted small">@interest.Description</div>
+                                }
+                            </div>
                         </div>
-                    </div>
-                }
+                    }
+                </div>
             </div>
         </div>
-    </div>
 
-    <button type="submit" class="btn btn-primary">
-        <i class="bi bi-save"></i> Select Ministry Interests
-    </button>
-</form>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-save"></i> Select Ministry Interests
+        </button>
+    </form>
+}

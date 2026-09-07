@@ -19,35 +19,54 @@
 
 <h2 class="mb-4">Select the Areas You Are Currently Serving In</h2>
 
-<form method="post">
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <div class="row">
-                @foreach (var area in Model.AllInvolvements)
-                {
-                    <div class="col-md-6 mb-2">
-                        <div class="form-check">
-                            <input class="form-check-input"
-                                   type="checkbox"
-                                   name="SelectedInvolvementIds"
-                                   value="@area.InvolvementAreaID"
-                                   id="role_@area.InvolvementAreaID"
-                                   @(Model.SelectedInvolvementIds.Contains(area.InvolvementAreaID) ? "checked" : "") />
-                            <label class="form-check-label fw-semibold" for="role_@area.InvolvementAreaID">
-                                @area.AreaOfInvolvement
-                            </label>
-                            @if (!string.IsNullOrEmpty(area.Description))
-                            {
-                                <div class="text-muted small">@area.Description</div>
-                            }
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="alert alert-danger" id="validationSummary">
+        <ul class="mb-0">
+            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+            {
+                <li>@error.ErrorMessage</li>
+            }
+        </ul>
+    </div>
+}
+
+@*
+    No form when the page could not load. An empty checkbox list looks exactly like
+    "I unticked everything", and submitting it would delete the answers already saved.
+*@
+@if (!Model.LoadFailed)
+{
+    <form method="post">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <div class="row">
+                    @foreach (var area in Model.AllInvolvements)
+                    {
+                        <div class="col-md-6 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       name="SelectedInvolvementIds"
+                                       value="@area.InvolvementAreaID"
+                                       id="role_@area.InvolvementAreaID"
+                                       @(Model.SelectedInvolvementIds.Contains(area.InvolvementAreaID) ? "checked" : "") />
+                                <label class="form-check-label fw-semibold" for="role_@area.InvolvementAreaID">
+                                    @area.AreaOfInvolvement
+                                </label>
+                                @if (!string.IsNullOrEmpty(area.Description))
+                                {
+                                    <div class="text-muted small">@area.Description</div>
+                                }
+                            </div>
                         </div>
-                    </div>
-                }
+                    }
+                </div>
             </div>
         </div>
-    </div>
 
-    <button type="submit" class="btn btn-primary">
-        <i class="bi bi-save"></i> Save My Service Roles
-    </button>
-</form>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-save"></i> Save My Service Roles
+        </button>
+    </form>
+}

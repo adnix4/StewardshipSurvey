@@ -24,15 +24,21 @@ namespace StewardshipSurvey.Pages.Members
         }
 
         public List<InvolvementAreaDto> AllInvolvements { get; set; } = new();
+
         [BindProperty]
         public List<int> SelectedInvolvementIds { get; set; } = new();
+
+        /// <summary>
+        /// True when the page could not be loaded. The view hides the form while it is set: an
+        /// empty checkbox list is indistinguishable from "I unticked everything", so letting
+        /// the member submit one would delete the answers they had already given.
+        /// </summary>
+        public bool LoadFailed { get; private set; }
 
         public async Task<IActionResult> OnGetAsync()
         {
             try
             {
-                _logger.LogInformation("Loading SelectMemberServiceRoles page");
-
                 // "Areas You Are Currently Serving In" does not apply to someone who is only
                 // considering membership. The nav hides it for them; this is the real guard.
                 if (await IsProspectiveMemberAsync())
@@ -41,7 +47,6 @@ namespace StewardshipSurvey.Pages.Members
                     return RedirectToPage("/Members/MemberInfo");
                 }
 
-                // Get current user
                 var user = await _userManager.GetUserAsync(User);
                 if (user?.MemberID == null)
                 {
@@ -49,34 +54,20 @@ namespace StewardshipSurvey.Pages.Members
                     return Unauthorized();
                 }
 
-                _logger.LogInformation($"Loading service roles for user {user.Email} (MemberID: {user.MemberID})");
+                await LoadServiceRolesAsync();
 
-                // Load all service roles from database
-                AllInvolvements = await _context.InvolvementAreas
-                    .Where(ia => ia.IsActive)
-                    .OrderBy(ia => ia.AreaOfInvolvement)
-                    .Select(ia => new InvolvementAreaDto
-                    {
-                        InvolvementAreaID = ia.InvolvementAreaID,
-                        AreaOfInvolvement = ia.AreaOfInvolvement,
-                        Description = ia.Description ?? string.Empty,
-                        IsActive = ia.IsActive
-                    })
-                    .ToListAsync();
-
-                _logger.LogInformation($"Loaded {AllInvolvements.Count} service roles");
-
-                // Load current user's selections from database
                 SelectedInvolvementIds = await _context.MemberServiceRoles
                     .Where(msr => msr.MemberID == user.MemberID.Value)
                     .Select(msr => msr.InvolvementAreaID)
                     .ToListAsync();
 
-                _logger.LogInformation($"User has {SelectedInvolvementIds.Count} previously selected service roles");
+                _logger.LogInformation("Loaded {Count} service roles for member {MemberId}, {Selected} already selected",
+                    AllInvolvements.Count, user.MemberID.Value, SelectedInvolvementIds.Count);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error loading service roles: {ex.Message}");
+                _logger.LogError(ex, "Error loading the service roles page");
+                RecordLoadFailure();
             }
 
             return Page();
@@ -95,14 +86,16 @@ namespace StewardshipSurvey.Pages.Members
 
                 int memberId = user.MemberID.Value;
 
-                _logger.LogInformation($"Saving {SelectedInvolvementIds.Count} service roles for user {user.Email}");
+                _logger.LogInformation("Saving {Count} service roles for member {MemberId}",
+                    SelectedInvolvementIds.Count, memberId);
 
-                // Remove existing service roles
                 var existing = _context.MemberServiceRoles.Where(msr => msr.MemberID == memberId);
                 _context.MemberServiceRoles.RemoveRange(existing);
 
-                // Add new selections
-                foreach (var involvementId in SelectedInvolvementIds)
+                // Distinct because the key is (MemberID, InvolvementAreaID): a post repeating
+                // an id would otherwise fail on the primary key, which is not something the
+                // member did wrong or could correct.
+                foreach (var involvementId in SelectedInvolvementIds.Distinct())
                 {
                     _context.MemberServiceRoles.Add(new MemberServiceRole
                     {
@@ -110,23 +103,67 @@ namespace StewardshipSurvey.Pages.Members
                         InvolvementAreaID = involvementId,
                         CreatedDate = DateTime.UtcNow
                     });
-                    _logger.LogInformation($"Added service role {involvementId}");
                 }
 
+                // One SaveChanges, so the removals and the additions are a single transaction.
+                // A failure here leaves the member's stored answers exactly as they were.
                 await _context.SaveChangesAsync();
-                _logger.LogInformation("Service roles saved successfully to database");
+                _logger.LogInformation("Saved service roles for member {MemberId}", memberId);
 
                 return RedirectToPage("/Members/MemberInfo");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error saving service roles: {ex.Message}");
-                ModelState.AddModelError("", "An error occurred while saving your selections.");
+                _logger.LogError(ex, "Error saving service roles");
+                ModelState.AddModelError(string.Empty,
+                    "We could not save your selections. Nothing was changed - please try again.");
             }
 
-            // Reload data on error
-            await OnGetAsync();
+            // Redisplay what the member just ticked, not what is stored. Calling OnGetAsync
+            // here - as this used to - overwrote their unsaved edit with the database's copy,
+            // and threw away the IActionResult it returned, so an Unauthorized() became a 200.
+            await ReloadServiceRolesAfterFailedSaveAsync();
             return Page();
+        }
+
+        private async Task LoadServiceRolesAsync()
+        {
+            AllInvolvements = await _context.InvolvementAreas
+                .Where(ia => ia.IsActive)
+                .OrderBy(ia => ia.AreaOfInvolvement)
+                .Select(ia => new InvolvementAreaDto
+                {
+                    InvolvementAreaID = ia.InvolvementAreaID,
+                    AreaOfInvolvement = ia.AreaOfInvolvement,
+                    Description = ia.Description ?? string.Empty,
+                    IsActive = ia.IsActive
+                })
+                .ToListAsync();
+        }
+
+        private async Task ReloadServiceRolesAfterFailedSaveAsync()
+        {
+            try
+            {
+                await LoadServiceRolesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Could not reload the service role list after a failed save");
+                RecordLoadFailure();
+            }
+        }
+
+        /// <summary>
+        /// Puts the page into its unusable state: an explanation the member can actually see,
+        /// and an empty option list so the view suppresses the form.
+        /// </summary>
+        private void RecordLoadFailure()
+        {
+            LoadFailed = true;
+            AllInvolvements.Clear();
+            ModelState.AddModelError(string.Empty,
+                "We could not load your service roles just now. Please try again in a moment.");
         }
 
         /// <summary>

@@ -6,7 +6,7 @@ can go straight to the code without re-deriving anything.
 Ticked items are kept rather than deleted: what was wrong and why it was wrong is the
 useful part, and several of these were found while fixing something else.
 
-State: `main`, 100 tests, 0 warnings, CI green. **Section 1 is empty.**
+State: `main`, 106 tests, 0 warnings, CI green. **Section 1 is empty.**
 
 ---
 
@@ -90,14 +90,32 @@ State: `main`, 100 tests, 0 warnings, CI green. **Section 1 is empty.**
   cookie as a side effect, so the endpoint has two auth mechanisms and validates the wrong one.
   `StewardshipSurvey.Maui/README.md:26` advertises this as working.
 
-- [ ] **Survey pages turn failures into success and can wipe saved answers.**
-  `StewardshipSurvey/Pages/Members/SelectInterests.cshtml.cs:69-74`
-  `StewardshipSurvey/Pages/Members/SelectMemberServiceRoles.cshtml.cs:77-82`
-  (`SelectMemberInvolvement` follows the same template)
-  Catches `Exception`, logs, then `return Page()` — the user sees an empty form with no error,
-  and the next POST saves that emptiness over their real selections.
-  Also `SelectInterests.cshtml.cs:120` does `await OnGetAsync(); return Page();`, **discarding
-  the `IActionResult`**, so an `Unauthorized()` becomes a 200.
+- [x] ~~**Survey pages turn failures into success and can wipe saved answers.**~~ Fixed across
+  all three steps — `SelectInterests`, `SelectMemberInvolvement`, `SelectMemberServiceRoles`.
+  A failed load now sets `LoadFailed`, empties the option list and adds a model error; the
+  views render that error and **omit the form entirely**. That is the fix for the wipe: an
+  empty checkbox list is byte-for-byte the same POST as "I unticked everything", so the only
+  safe thing is to not offer the form at all. The views had no validation summary either, so
+  `AddModelError` had been writing to something nothing rendered — the error was invisible
+  even where the code remembered to add one.
+  The POST path no longer calls `OnGetAsync()` to redraw. That call was the source of the
+  discarded `IActionResult`, and it also replaced the member's unsaved selections with the
+  stored ones, so a transient failure looked like their edit had been thrown away. It now
+  reloads only the option list and keeps what was posted.
+  Also added `.Distinct()` on the posted ids: the keys are composite `(MemberID, AreaID)`, so
+  a repeated id failed on the primary key — a failure the member neither caused nor could act
+  on.
+  Covered by `StewardshipSurvey.Tests/Integration/SurveyFailureHandlingTests.cs` — 6 tests in
+  two classes. Teeth verified individually: neutralising `RecordLoadFailure` reds all 3 load
+  tests, forcing the form to render reds the suppression assertion on its own, hiding the
+  validation summary reds the save test, restoring the `OnGetAsync()` redraw reds the
+  redisplay test, and dropping `Distinct` reds the duplicate test.
+  **Honest limit:** the discarded-`IActionResult` bug has no test. To reach it, `OnPost` had
+  to get past its own `MemberID` check and then throw, while `OnGet` failed the same check for
+  the same user — which cannot happen in one request. It is fixed by deleting the call, not
+  by a test.
+  Note: `OnPostAsync` on `SelectMemberServiceRoles` still has no prospective-member guard —
+  see the new item in section 3. It was out of scope here and predates this change.
 
 - [ ] **The testing skill contradicts the code.**
   `.claude/skills/testing/SKILL.md:97`
@@ -128,6 +146,13 @@ State: `main`, 100 tests, 0 warnings, CI green. **Section 1 is empty.**
   `MemberReport.cshtml.cs:68-120` and `OnGetExport` repeat the same include/filter/sort chain.
   `ParseIntList` is duplicated byte-for-byte between `ReportsController.cs:100-109` and
   `MemberReport.cshtml.cs:198-207`, double-parse bug included (TryParse then Parse).
+
+- [ ] **`SelectMemberServiceRoles` guards the GET but not the POST.**
+  `Pages/Members/SelectMemberServiceRoles.cshtml.cs` — `OnGetAsync` redirects a prospective
+  member away via `IsProspectiveMemberAsync`; `OnPostAsync` has no such check, so a direct
+  POST saves service roles for someone the step does not apply to. Not an escalation — they
+  can only write their own rows — but the guard is described as "the real guard" and only
+  covers half the page. Found while fixing the failure-handling item in section 2.
 
 - [ ] **Three API controllers are anonymous-by-default.** `InterestsController`,
   `InvolvementsController`, `ServiceRolesController` have no class-level `[Authorize]` — only

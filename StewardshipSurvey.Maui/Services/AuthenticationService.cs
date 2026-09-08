@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -21,7 +21,7 @@ public class AuthenticationService
     /// signing key was rotated. Without this a rejected session simply looked like a member
     /// with no data.
     /// </summary>
-    public event EventHandler? SessionEnded;
+    public event EventHandler SessionEnded;
 
     public AuthenticationService()
     {
@@ -199,7 +199,7 @@ public class AuthenticationService
 
     private class LoginResponse
     {
-        public string? Token { get; set; }
-        public string? Message { get; set; }
+        public string Token { get; set; }
+        public string Message { get; set; }
     }
 }

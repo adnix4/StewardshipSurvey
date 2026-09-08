@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="StewardshipSurvey.Maui.SelectInterestsPage"
-             Title="Select Interests"
+             x:Class="StewardshipSurvey.Maui.SelectInvolvementsPage"
+             Title="Select Ministries"
              BackgroundColor="{StaticResource PageBackgroundColor}">
 
     <Grid RowDefinitions="Auto,*,Auto,Auto" Padding="20" RowSpacing="10">
 
         <Label Grid.Row="0"
-               Text="Select the areas and items that interest you most"
+               Text="Select the ministries that you are interested in"
                FontSize="18"
                FontAttributes="Bold" />
 
@@ -16,15 +16,15 @@
              the checked state honest without a value converter to translate a List&lt;int&gt;
              into a per-row bool. -->
         <CollectionView Grid.Row="1"
-                        x:Name="InterestList"
-                        ItemsSource="{Binding AllInterests}"
+                        x:Name="InvolvementList"
+                        ItemsSource="{Binding AllInvolvements}"
                         SelectionMode="Multiple"
                         SelectionChanged="OnSelectionChanged">
             <CollectionView.ItemTemplate>
                 <DataTemplate>
                     <Border Padding="10" Margin="0,5" Stroke="{StaticResource PrimaryColor}" StrokeThickness="1">
                         <VerticalStackLayout Spacing="4">
-                            <Label Text="{Binding InterestArea}" FontAttributes="Bold" />
+                            <Label Text="{Binding AreaOfInvolvement}" FontAttributes="Bold" />
                             <Label Text="{Binding Description}"
                                    FontSize="12"
                                    TextColor="{StaticResource TextSecondaryColor}" />
@@ -41,7 +41,7 @@
 
         <Button Grid.Row="3"
                 Text="Next"
-                Command="{Binding SaveInterestsCommand}"
+                Command="{Binding SaveInvolvementsCommand}"
                 IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}" />
 
         <ActivityIndicator Grid.Row="0"

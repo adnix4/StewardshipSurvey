@@ -6,9 +6,9 @@ can go straight to the code without re-deriving anything.
 Ticked items are kept rather than deleted: what was wrong and why it was wrong is the
 useful part, and several of these were found while fixing something else.
 
-State: `main`, 172 tests, 0 warnings, CI green. **Every item this file was opened with is
-closed, and so is everything found since — except one.** The MAUI app turns out never to have
-been built or finished; that is now its own item, with the analysis done.
+State: `main`, 172 tests, 0 warnings, CI green. **Every item is closed** — the five sections
+this file was opened with, and everything found while working through them. The MAUI app now
+compiles for the first time; what is untested there is written down rather than implied.
 
 ---
 
@@ -219,89 +219,36 @@ been built or finished; that is now its own item, with the analysis done.
   Also fixed while there: `LogoutAsync` did `await _secureStorage.Remove(...)`, awaiting a
   `bool`. `ISecureStorage.Remove` is synchronous, so that never compiled.
 
-- [ ] **The MAUI app has never been built, and is not finished.**
-  Found while doing the item above, after installing the MAUI workload to get a real compiler.
-  It is not "a project with a few errors" — it was never a working app. Fixed so far, all
-  pre-existing:
-  `<Project Sdk="Microsoft.Maui.Sdk">` — that is an inner SDK the .NET SDK imports when
-  `UseMaui` is true, not a valid root SDK, so the project could not even be evaluated;
-  `$([OperatingSystem]::IsWindows())` in two conditions, which is not a permitted MSBuild
-  property function (`$([MSBuild]::IsOSPlatform('windows'))` is);
-  explicit `Microsoft.Maui.Controls` / `.Hosting` package references, which the workload
-  supplies from `library-packs` and which this repo's package source mapping cannot resolve;
-  eight missing `using` directives across the view models, pages and services
-  (`System.Collections.ObjectModel`, `System.Diagnostics`, the view-model namespace).
-  **Still missing, and the reason it does not build:**
-  `Pages/SelectInvolvementsPage` and `Pages/SelectServiceRolesPage` are registered in
-  `MauiProgram` but were never written — no XAML, no code-behind. And there is no `Platforms/`
-  or `Resources/` folder at all, so there is no entry point on any target framework (`CS5001`)
-  and no app icon, splash or manifest.
-  Finishing this means authoring two screens and the whole platform layer, which is building
-  the app rather than repairing it — and none of it can be run here, since there is no emulator
-  or device. Worth deciding on deliberately rather than drifting into.
-
-- [x] ~~**Report logic exists in triplicate.**~~ Fixed. `Data/MemberReportQuery.cs` now holds
-  the include/filter chain, the sort and `ParseIntList`, and all three call sites use it.
-  **The copies had already drifted, which is the point of the item.** `OnGetExport` accepted
-  `sortColumn` and `sortAscending` and then materialised the query with no `OrderBy` at all -
-  so the CSV came out in database order while the screen showed the same filters sorted. That
-  was not in this list; three copies is how it stayed unnoticed. The extraction fixes it by
-  construction.
-  `ParseIntList` now parses each value once instead of `TryParse`-then-`Parse`, and moved off
-  the page model, so its unit test no longer needs a page model built round a null context.
-  Covered by `Integration/MemberReportExportTests.cs` (5) plus the existing unit tests. Teeth
-  verified: removing the sort reds the sort test, restoring the Status column reds that one.
-
-- [x] ~~**`SelectMemberServiceRoles` guards the GET but not the POST.**~~ Fixed — `OnPostAsync`
-  calls the same `IsProspectiveMemberAsync` and redirects, so the helper's doc comment is now
-  true of the whole page rather than half of it.
-  Covered in `AdminAndGuardTests`: a prospective member posting directly is redirected and
-  writes no rows. Teeth verified — removing the guard reds it.
-
-- [x] ~~**Three API controllers are anonymous-by-default.**~~ Fixed — and it was four.
-  `AuthController` had the same shape and is not in the original list; the test found it, not
-  I did. All four now carry class-level `[Authorize]`, with `[AllowAnonymous]` on the five
-  actions that are deliberately public (the three catalogue lists, plus login and refresh).
-  **This could not be tested through HTTP.** Nothing was exposed before the fix — every
-  `current` action had its own attribute — so no request behaves differently. The defect is in
-  what happens next, when an action is added without one. `Unit/ApiControllerAuthorizationTests.cs`
-  therefore tests it structurally: every controller in the API namespace must deny by default,
-  the anonymous actions are an explicit allow-list, and a third test pins the controller names
-  so a namespace rename cannot turn the other two into no-ops that pass forever.
-  Teeth verified: removing a class-level attribute reds it and names the controller.
-
-- [x] ~~**Nav lags after an admin changes membership status.**~~ Fixed, and it stopped being
-  cosmetic while this was open. `EditUser.OnPostAsync` now calls `UpdateSecurityStampAsync`
-  when roles or status actually changed — the same lever `OnPostDeactivateAsync:230` already
-  used. Once bearer tokens became real, a stale role claim was no longer only a wrong menu: an
-  outstanding API token carried the old roles until it expired.
-  Guarded both ways: one test asserts the stamp moves and an existing token stops working,
-  another asserts an edit that changes nothing leaves the session alone — the bump signs the
-  person out everywhere, so it must not fire on an idle save. Teeth verified on the first.
-
-- [x] ~~**Two accounts have the `Member` role with a null `MembershipStatus`.**~~ Fixed as code
-  rather than as data. `MembershipStatusRoles.SyncAsync` only ever ran from a write, so a row
-  never re-saved stayed inconsistent forever — "self-heals on save" was true and useless,
-  because nothing was going to save them. `AdminSeeder`'s existing per-user backfill loop now
-  reconciles the status role against the profile, with the same counter-and-log shape the
-  `EmailConfirmed` backfill uses, so it heals on startup and cannot drift again.
-  `StatusRolesAreStaleAsync` is `internal` so the check is testable without a running seeder,
-  and so the log line counts real repairs rather than every account.
-  **Caveat:** `AdminSeeder` runs in Development only. This repairs the developer database and
-  any future one, not a production database.
-
-- [x] ~~**CSV built with `+=` in a loop.**~~ Fixed - `StringBuilder`, matching
-  `Services/FileDropEmailSender.cs:47`. Done in the same pass as the two items above because
-  it is the same twenty lines. No test: the output is identical and only the copying is gone,
-  so there is nothing to assert that the existing export tests do not already cover.
-
-- [x] ~~**Logging uses string interpolation with user input.**~~ Already fixed; no code change.
-  The cited lines were real when written - `git show f97ca0c:StewardshipSurvey/Controllers/Api/AuthController.cs`
-  still has all four - but `e3af9df` rewrote them into structured templates while adding the
-  lockout branches, and `5c714f8` did the `Pages/Members/*` half while fixing the survey
-  failure handling. Both were side effects of adjacent work rather than deliberate.
-  Verified empty: `grep -rE 'Log(Information|Error|Warning|Debug)\(\s*\$"' StewardshipSurvey/`
-  returns nothing.
+- [x] ~~**The MAUI app has never been built, and is not finished.**~~ It builds now, clean, for
+  `net8.0-windows10.0.19041.0` - the first time this project has ever compiled.
+  Everything below was pre-existing. The csproj fixes are in the previous item; on top of those:
+  `Pages/SelectInvolvementsPage` and `Pages/SelectServiceRolesPage` were registered in
+  `MauiProgram` but had never been written. Both authored, and `SelectInterestsPage` rewritten
+  to match, because it had its own faults: a `StackLayout` carrying `BorderStroke` (a `Border`
+  property) and three converters that do not exist anywhere.
+  `Converters/ValueConverters.cs` supplies the two the pages actually need. A missing converter
+  is a runtime XAML failure rather than a compile error, which is part of how it survived in a
+  project nobody could run.
+  `AppShell.xaml` used `local:LoginPage` without declaring the `local` namespace, and
+  **no route was ever registered** - every `GoToAsync` in the app pointed at nothing, so each
+  step of the survey would have thrown the moment it was reached. All five registered now.
+  `App.xaml` set `Padding` on `Entry`, which has no such property.
+  No `Platforms/` folder existed, so there was no entry point on any target framework. Heads
+  added for Windows, Android, iOS and MacCatalyst in the standard template shape.
+  No `Resources/` folder either: no icon, no splash, and `ConfigureFonts` naming two `.ttf`
+  files that have never been in the repository. Icon and splash added; the font references were
+  removed rather than left pointing at nothing, with `Resources/Fonts/README.md` recording how
+  to put them back.
+  `Microsoft.Maui.Controls` is referenced again at 8.0.100 - the version the installed workload
+  expects. From .NET 8 `UseMaui` no longer implies it (MA002); the 8.0.80 that was pinned
+  before was both wrong and unresolvable.
+  **What is still not true:** only the Windows target has been built. Android needs the Android
+  SDK and a JDK, iOS and MacCatalyst need a Mac, and none of them are installed here. And
+  nothing has been *run* - there is no device or emulator, so the survey flow has never been
+  exercised end to end. The app compiles and is wired correctly as far as a compiler can tell,
+  which is a real step up from never having built, and is not the same as working.
+  The project stays out of `StewardshipSurvey.sln`, for the reason already recorded: CI is
+  `ubuntu-latest` and has no MAUI workloads.
 
 ---
 

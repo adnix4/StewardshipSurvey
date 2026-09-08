@@ -3,11 +3,11 @@ using StewardshipSurvey.Maui.ViewModels;
 
 namespace StewardshipSurvey.Maui;
 
-public partial class SelectInterestsPage : ContentPage
+public partial class SelectInvolvementsPage : ContentPage
 {
-    private readonly SelectInterestsViewModel _viewModel;
+    private readonly SelectInvolvementsViewModel _viewModel;
 
-    public SelectInterestsPage(SelectInterestsViewModel viewModel)
+    public SelectInvolvementsPage(SelectInvolvementsViewModel viewModel)
     {
         InitializeComponent();
         _viewModel = viewModel;
@@ -17,21 +17,21 @@ public partial class SelectInterestsPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-        await _viewModel.LoadInterestsCommand.ExecuteAsync(null);
+        await _viewModel.LoadInvolvementsCommand.ExecuteAsync(null);
 
         // Re-check the rows the member has already chosen. The list is loaded in OnAppearing,
         // so this has to run after it or there would be nothing to select.
-        InterestList.SelectedItems = _viewModel.AllInterests
-            .Where(a => _viewModel.SelectedInterestIds.Contains(a.InterestAreaID))
+        InvolvementList.SelectedItems = _viewModel.AllInvolvements
+            .Where(a => _viewModel.SelectedInvolvementIds.Contains(a.InvolvementAreaID))
             .Cast<object>()
             .ToList();
     }
 
     private void OnSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        _viewModel.SelectedInterestIds = e.CurrentSelection
-            .OfType<InterestAreaDto>()
-            .Select(a => a.InterestAreaID)
+        _viewModel.SelectedInvolvementIds = e.CurrentSelection
+            .OfType<InvolvementAreaDto>()
+            .Select(a => a.InvolvementAreaID)
             .ToList();
     }
 }

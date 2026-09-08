@@ -55,6 +55,20 @@ StewardshipSurvey.Maui/
 +-- Models/
 |   +-- Dtos.cs                             # Data transfer objects
 |
++-- Converters/
+|   +-- ValueConverters.cs                  # Bindings the XAML relies on
+|
++-- Platforms/
+|   +-- Android/                            # MainActivity, MainApplication, manifest
+|   +-- iOS/                                # AppDelegate, Program, Info.plist
+|   +-- MacCatalyst/                        # AppDelegate, Program, Info.plist
+|   +-- Windows/                            # WinUI App, app.manifest
+|
++-- Resources/
+|   +-- AppIcon/                            # appicon.svg, appiconfg.svg
+|   +-- Splash/                             # splash.svg
+|   +-- Fonts/                              # empty - see the README there
+|
 +-- StewardshipSurvey.Maui.csproj           # Project configuration
 ```
 
@@ -171,13 +185,27 @@ The application communicates with the following API endpoints:
    - Token removed from secure storage
    - User redirected to login page
 
-> **Client work still outstanding.** The server side of the above is implemented and tested
-> (`StewardshipSurvey.Tests/Integration/BearerAuthTests.cs`). The client is not caught up:
-> `Services/AuthenticationService.cs` never calls `/api/auth/logout`, there is no refresh call
-> anywhere, and `Services/MemberApiService.cs` turns a 401 into empty data rather than sending
-> the member back to the login page. Until that is done a session will simply stop returning
-> data an hour after sign-in. This project is not in `StewardshipSurvey.sln` and CI does not
-> build it, so none of that is caught automatically.
+The client implements all of this: `AuthenticationService.RefreshAsync` renews the token,
+`LogoutAsync` calls the server before clearing locally, and `MemberApiService` retries once on
+a 401 rather than reporting an empty result.
+
+## Building
+
+```bash
+dotnet build StewardshipSurvey.Maui/StewardshipSurvey.Maui.csproj -f net8.0-windows10.0.19041.0
+```
+
+Needs the MAUI workload (`dotnet workload install maui`). **Windows is the only target that
+builds without further tooling** - Android additionally needs the Android SDK and a JDK, and
+iOS and MacCatalyst need a Mac.
+
+This project is deliberately not in `StewardshipSurvey.sln`: CI runs on `ubuntu-latest`, which
+has no MAUI workloads, so including it would break the build for the web application. Nothing
+builds or tests this project automatically, so build it locally before trusting a change.
+
+**Nothing here has been run.** The app compiles and the platform heads are the standard
+template shape, but there is no device or emulator in the loop, so the survey flow has never
+been exercised end to end.
 
 ## Data Models
 

@@ -1,10 +1,14 @@
-<?xml version = "1.0" encoding = "utf-8" ?>
+﻿<?xml version = "1.0" encoding = "utf-8" ?>
 <Application
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:converters="clr-namespace:StewardshipSurvey.Maui.Converters"
     x:Class="StewardshipSurvey.Maui.App">
     <Application.Resources>
         <ResourceDictionary>
+            <converters:StringNotEmptyConverter x:Key="StringNotEmptyConverter" />
+            <converters:InvertedBoolConverter x:Key="InvertedBoolConverter" />
+
             <Color x:Key="PageBackgroundColor">#FFFFFF</Color>
             <Color x:Key="PrimaryColor">#007AFF</Color>
             <Color x:Key="SecondaryColor">#5AC8FA</Color>
@@ -15,7 +19,6 @@
 
             <Style TargetType="Label">
                 <Setter Property="TextColor" Value="{StaticResource TextColor}" />
-                <Setter Property="FontFamily" Value="OpenSansRegular" />
             </Style>
 
             <Style TargetType="Button">
@@ -26,9 +29,9 @@
                 <Setter Property="CornerRadius" Value="8" />
             </Style>
 
+            <!-- Entry has no Padding property; the setter was a XAML compile error. -->
             <Style TargetType="Entry">
                 <Setter Property="FontSize" Value="14" />
-                <Setter Property="Padding" Value="10" />
             </Style>
 
             <Style TargetType="CheckBox">

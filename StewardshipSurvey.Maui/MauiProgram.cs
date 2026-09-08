@@ -13,11 +13,10 @@ public static class MauiProgram
         var builder = MauiApp.CreateBuilder();
         builder
             .UseMauiApp<App>()
-            .ConfigureFonts(fonts =>
-            {
-                fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-                fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
-            });
+            // No ConfigureFonts: the .ttf files these used to name have never been in the
+            // repository, so the family resolved to nothing and every control fell back to the
+            // platform default anyway. See Resources/Fonts/README.md to put them back.
+            ;
 
         // Register services
         builder.Services.AddSingleton<App>();

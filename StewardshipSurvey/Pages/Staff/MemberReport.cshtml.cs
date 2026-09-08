@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using StewardshipSurvey.Data;
 using StewardshipSurvey.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Text;
 
 
 namespace StewardshipSurvey.Pages.Staff
@@ -43,12 +44,13 @@ namespace StewardshipSurvey.Pages.Staff
             SortColumn = sortColumn;
             SortAscending = sortAscending;
 
-            // Parse selected filters
-            SelectedServiceRoles = ParseIntList(serviceRoles);
-            SelectedInterests = ParseIntList(interests);
-            SelectedInvolvementAreas = ParseIntList(involvementAreas);
+            var filter = MemberReportFilter.From(searchTerm, serviceRoles, interests, involvementAreas);
 
-            // Load filter options
+            SelectedServiceRoles = filter.ServiceRoleIds;
+            SelectedInterests = filter.InterestIds;
+            SelectedInvolvementAreas = filter.InvolvementAreaIds;
+
+            // Filter options for the form at the top of the page.
             ServiceRoles = await _context.InvolvementAreas
                 .Where(ia => ia.IsActive)
                 .OrderBy(ia => ia.AreaOfInvolvement)
@@ -64,63 +66,13 @@ namespace StewardshipSurvey.Pages.Staff
                 .OrderBy(ia => ia.AreaOfInvolvement)
                 .ToListAsync();
 
-            // Get members with related data - use IQueryable, not IIncludableQueryable
-            IQueryable<MemberInfo> query = _context.MemberInfos
-                .Where(m => m.IsActive)
-                .Include(m => m.MemberServiceRoles)
-                .ThenInclude(msr => msr.InvolvementArea)
-                .Include(m => m.MemberInterests)
-                .ThenInclude(mi => mi.InterestArea)
-                .Include(m => m.MemberInvolvements)
-                .ThenInclude(mi => mi.InvolvementArea);
+            var query = MemberReportQuery.ApplySort(
+                MemberReportQuery.Build(_context, filter), sortColumn, sortAscending);
 
-            // Apply search filter
-            if (!string.IsNullOrEmpty(searchTerm))
-            {
-                query = query.Where(m =>
-                    (m.FirstName ?? "").Contains(searchTerm) ||
-                    (m.LastName ?? "").Contains(searchTerm) ||
-                    (m.Email ?? "").Contains(searchTerm) ||
-                    (m.CellPhoneNumber ?? "").Contains(searchTerm));
-            }
-
-            // Apply service roles filter
-            if (SelectedServiceRoles.Any())
-            {
-                query = query.Where(m =>
-                    m.MemberServiceRoles.Any(msr => SelectedServiceRoles.Contains(msr.InvolvementAreaID)));
-            }
-
-            // Apply interests filter
-            if (SelectedInterests.Any())
-            {
-                query = query.Where(m =>
-                    m.MemberInterests.Any(mi => SelectedInterests.Contains(mi.InterestAreaID)));
-            }
-
-            // Apply involvement areas filter
-            if (SelectedInvolvementAreas.Any())
-            {
-                query = query.Where(m =>
-                    m.MemberInvolvements.Any(mi => SelectedInvolvementAreas.Contains(mi.InvolvementAreaID)));
-            }
-
-            // Apply sorting
-            Members = sortColumn switch
-            {
-                "Email" => sortAscending
-                    ? await query.OrderBy(m => m.Email).ToListAsync()
-                    : await query.OrderByDescending(m => m.Email).ToListAsync(),
-                "Phone" => sortAscending
-                    ? await query.OrderBy(m => m.CellPhoneNumber).ToListAsync()
-                    : await query.OrderByDescending(m => m.CellPhoneNumber).ToListAsync(),
-                _ => sortAscending
-                    ? await query.OrderBy(m => m.FirstName).ThenBy(m => m.LastName).ToListAsync()
-                    : await query.OrderByDescending(m => m.FirstName).ThenByDescending(m => m.LastName).ToListAsync()
-            };
+            Members = await query.ToListAsync();
         }
 
-        public IActionResult OnGetExport(
+        public async Task<IActionResult> OnGetExportAsync(
             string searchTerm = "",
             string sortColumn = "FirstName",
             bool sortAscending = true,
@@ -128,65 +80,41 @@ namespace StewardshipSurvey.Pages.Staff
             string interests = "",
             string involvementAreas = "")
         {
-            var selectedServiceRoles = ParseIntList(serviceRoles);
-            var selectedInterests = ParseIntList(interests);
-            var selectedInvolvementAreas = ParseIntList(involvementAreas);
+            var filter = MemberReportFilter.From(searchTerm, serviceRoles, interests, involvementAreas);
 
-            // Use IQueryable instead of IIncludableQueryable
-            IQueryable<MemberInfo> query = _context.MemberInfos
-                .Where(m => m.IsActive)
-                .Include(m => m.MemberServiceRoles)
-                .ThenInclude(msr => msr.InvolvementArea)
-                .Include(m => m.MemberInterests)
-                .ThenInclude(mi => mi.InterestArea)
-                .Include(m => m.MemberInvolvements)
-                .ThenInclude(mi => mi.InvolvementArea);
+            // The sort used to be missing here entirely: this handler accepted sortColumn and
+            // sortAscending and then materialised the query without an OrderBy, so the CSV came
+            // out in whatever order the database returned while the screen above showed the
+            // same filters sorted.
+            var query = MemberReportQuery.ApplySort(
+                MemberReportQuery.Build(_context, filter), sortColumn, sortAscending);
 
-            if (!string.IsNullOrEmpty(searchTerm))
-            {
-                query = query.Where(m =>
-                    (m.FirstName ?? "").Contains(searchTerm) ||
-                    (m.LastName ?? "").Contains(searchTerm) ||
-                    (m.Email ?? "").Contains(searchTerm) ||
-                    (m.CellPhoneNumber ?? "").Contains(searchTerm));
-            }
+            var members = await query.ToListAsync();
 
-            if (selectedServiceRoles.Any())
-            {
-                query = query.Where(m =>
-                    m.MemberServiceRoles.Any(msr => selectedServiceRoles.Contains(msr.InvolvementAreaID)));
-            }
+            // StringBuilder, not repeated concatenation. A full export copied the entire CSV
+            // once per member.
+            var csv = new StringBuilder();
 
-            if (selectedInterests.Any())
-            {
-                query = query.Where(m =>
-                    m.MemberInterests.Any(mi => selectedInterests.Contains(mi.InterestAreaID)));
-            }
+            // No Status column. It read member.IsActive, which the query above has already
+            // filtered to true, so it said "Active" on every row of every export ever taken.
+            csv.Append("First Name,Last Name,Email,Phone,Service Roles,Interests,Involvement Areas\n");
 
-            if (selectedInvolvementAreas.Any())
-            {
-                query = query.Where(m =>
-                    m.MemberInvolvements.Any(mi => selectedInvolvementAreas.Contains(mi.InvolvementAreaID)));
-            }
-
-            var members = query.ToList();
-
-            var csv = "First Name,Last Name,Email,Phone,Service Roles,Interests,Involvement Areas,Status\n";
             foreach (var member in members)
             {
                 var serviceRolesList = string.Join("; ", member.MemberServiceRoles.Select(r => r.InvolvementArea?.AreaOfInvolvement ?? ""));
                 var interestsList = string.Join("; ", member.MemberInterests.Select(i => i.InterestArea?.InterestArea ?? ""));
                 var involvementsList = string.Join("; ", member.MemberInvolvements.Select(i => i.InvolvementArea?.AreaOfInvolvement ?? ""));
-                var status = member.IsActive ? "Active" : "Inactive";
 
-                csv += string.Join(",", new[]
+                csv.Append(string.Join(",", new[]
                 {
                     member.FirstName, member.LastName, member.Email, member.CellPhoneNumber,
-                    serviceRolesList, interestsList, involvementsList, status
-                }.Select(CsvField)) + "\n";
+                    serviceRolesList, interestsList, involvementsList
+                }.Select(CsvField)));
+
+                csv.Append('\n');
             }
 
-            var bytes = System.Text.Encoding.UTF8.GetBytes(csv);
+            var bytes = Encoding.UTF8.GetBytes(csv.ToString());
             return File(bytes, "text/csv", "MemberReport.csv");
         }
 
@@ -229,15 +157,5 @@ namespace StewardshipSurvey.Pages.Staff
             return $"\"{text.Replace("\"", "\"\"")}\"";
         }
 
-        internal List<int> ParseIntList(string commaSeparatedValues)
-        {
-            if (string.IsNullOrEmpty(commaSeparatedValues))
-                return new List<int>();
-
-            return commaSeparatedValues.Split(',')
-                .Where(s => int.TryParse(s.Trim(), out _))
-                .Select(s => int.Parse(s.Trim()))
-                .ToList();
-        }
     }
 }

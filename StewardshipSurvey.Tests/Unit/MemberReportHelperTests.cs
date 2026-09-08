@@ -1,3 +1,4 @@
+using StewardshipSurvey.Data;
 using StewardshipSurvey.Pages.Staff;
 
 namespace StewardshipSurvey.Tests.Unit
@@ -104,11 +105,19 @@ namespace StewardshipSurvey.Tests.Unit
         [InlineData("nonsense", new int[0])]
         public void ParseIntList_keeps_only_valid_integers(string input, int[] expected)
         {
-            // ParseIntList is an instance method but touches no state, so a page model built
-            // with a null context is enough to reach it.
-            var model = new MemberReportModel(null!);
+            // Moved to MemberReportQuery when the report's filter chain stopped existing in
+            // triplicate. It no longer needs a page model built round a null context to reach.
+            Assert.Equal(expected, MemberReportQuery.ParseIntList(input));
+        }
 
-            Assert.Equal(expected, model.ParseIntList(input));
+        [Fact]
+        public void ParseIntList_parses_each_value_once()
+        {
+            // The two copies this replaced filtered with int.TryParse and then parsed the same
+            // string a second time with int.Parse. Nothing observable went wrong, which is why
+            // it survived: this pins the single-pass shape rather than the old double parse.
+            Assert.Equal(new[] { int.MaxValue, int.MinValue }, MemberReportQuery.ParseIntList(
+                $"{int.MaxValue},{int.MinValue},{(long)int.MaxValue + 1}"));
         }
 
         /// <summary>Counts top-level fields, respecting RFC 4180 quoting.</summary>

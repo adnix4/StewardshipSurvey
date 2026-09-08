@@ -28,58 +28,12 @@ namespace StewardshipSurvey.Controllers.Api
             string interests = "",
             string involvementAreas = "")
         {
-            var selectedServiceRoles = ParseIntList(serviceRoles);
-            var selectedInterests = ParseIntList(interests);
-            var selectedInvolvementAreas = ParseIntList(involvementAreas);
+            var filter = MemberReportFilter.From(searchTerm, serviceRoles, interests, involvementAreas);
 
-            IQueryable<MemberInfo> query = _context.MemberInfos
-                .Where(m => m.IsActive)
-                .Include(m => m.MemberServiceRoles)
-                .ThenInclude(msr => msr.InvolvementArea)
-                .Include(m => m.MemberInterests)
-                .ThenInclude(mi => mi.InterestArea)
-                .Include(m => m.MemberInvolvements)
-                .ThenInclude(mi => mi.InvolvementArea);
+            var query = MemberReportQuery.ApplySort(
+                MemberReportQuery.Build(_context, filter), sortColumn, sortAscending);
 
-            if (!string.IsNullOrEmpty(searchTerm))
-            {
-                query = query.Where(m =>
-                    (m.FirstName ?? "").Contains(searchTerm) ||
-                    (m.LastName ?? "").Contains(searchTerm) ||
-                    (m.Email ?? "").Contains(searchTerm) ||
-                    (m.CellPhoneNumber ?? "").Contains(searchTerm));
-            }
-
-            if (selectedServiceRoles.Any())
-            {
-                query = query.Where(m =>
-                    m.MemberServiceRoles.Any(msr => selectedServiceRoles.Contains(msr.InvolvementAreaID)));
-            }
-
-            if (selectedInterests.Any())
-            {
-                query = query.Where(m =>
-                    m.MemberInterests.Any(mi => selectedInterests.Contains(mi.InterestAreaID)));
-            }
-
-            if (selectedInvolvementAreas.Any())
-            {
-                query = query.Where(m =>
-                    m.MemberInvolvements.Any(mi => selectedInvolvementAreas.Contains(mi.InvolvementAreaID)));
-            }
-
-            var members = sortColumn switch
-            {
-                "Email" => sortAscending
-                    ? await query.OrderBy(m => m.Email).ToListAsync()
-                    : await query.OrderByDescending(m => m.Email).ToListAsync(),
-                "Phone" => sortAscending
-                    ? await query.OrderBy(m => m.CellPhoneNumber).ToListAsync()
-                    : await query.OrderByDescending(m => m.CellPhoneNumber).ToListAsync(),
-                _ => sortAscending
-                    ? await query.OrderBy(m => m.FirstName).ThenBy(m => m.LastName).ToListAsync()
-                    : await query.OrderByDescending(m => m.FirstName).ThenByDescending(m => m.LastName).ToListAsync()
-            };
+            var members = await query.ToListAsync();
 
             var report = members.Select(m => new MemberReportDto
             {
@@ -97,15 +51,5 @@ namespace StewardshipSurvey.Controllers.Api
             return Ok(report);
         }
 
-        private List<int> ParseIntList(string commaSeparatedValues)
-        {
-            if (string.IsNullOrEmpty(commaSeparatedValues))
-                return new List<int>();
-
-            return commaSeparatedValues.Split(',')
-                .Where(s => int.TryParse(s.Trim(), out _))
-                .Select(s => int.Parse(s.Trim()))
-                .ToList();
-        }
     }
 }

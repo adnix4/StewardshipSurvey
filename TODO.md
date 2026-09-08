@@ -159,9 +159,13 @@ State: `main`, 117 tests, 0 warnings, CI green. **Sections 1 and 2 are clear.**
 
 ## 3. Medium — correctness and coverage
 
-- [ ] **CSV Status column is dead.** `MemberReport.cshtml.cs:137` filters
-  `.Where(m => m.IsActive)`; line 180 then computes `member.IsActive ? "Active" : "Inactive"`.
-  Always "Active".
+- [x] ~~**CSV Status column is dead.**~~ Fixed by removing the column. The report is an
+  active-members report at every call site, so the value was computed after the filter that
+  made it a foregone conclusion: every row of every export ever taken said "Active". Making it
+  mean something would have meant including deactivated members in a staff export, which is a
+  product decision rather than a bug fix.
+  Note the path in this item was wrong: the file is `Pages/Staff/MemberReport.cshtml.cs`, not
+  `Pages/Admin/`.
 
 - [ ] **Role changes applied without checking the result.**
   `Pages/Admin/EditUser.cshtml.cs:128,130` (also 220, 227) discard the `IdentityResult` and
@@ -188,11 +192,17 @@ State: `main`, 117 tests, 0 warnings, CI green. **Sections 1 and 2 are clear.**
   week, a session will silently stop returning data after an hour. Recorded in the MAUI README
   too. The project is not in the solution and CI never builds it, so nothing catches this.
 
-- [ ] **Report logic exists in triplicate.** (Unrelated to the profile-form duplication,
-  which the overposting fix removed.) `Controllers/Api/ReportsController.cs:35-82`,
-  `MemberReport.cshtml.cs:68-120` and `OnGetExport` repeat the same include/filter/sort chain.
-  `ParseIntList` is duplicated byte-for-byte between `ReportsController.cs:100-109` and
-  `MemberReport.cshtml.cs:198-207`, double-parse bug included (TryParse then Parse).
+- [x] ~~**Report logic exists in triplicate.**~~ Fixed. `Data/MemberReportQuery.cs` now holds
+  the include/filter chain, the sort and `ParseIntList`, and all three call sites use it.
+  **The copies had already drifted, which is the point of the item.** `OnGetExport` accepted
+  `sortColumn` and `sortAscending` and then materialised the query with no `OrderBy` at all -
+  so the CSV came out in database order while the screen showed the same filters sorted. That
+  was not in this list; three copies is how it stayed unnoticed. The extraction fixes it by
+  construction.
+  `ParseIntList` now parses each value once instead of `TryParse`-then-`Parse`, and moved off
+  the page model, so its unit test no longer needs a page model built round a null context.
+  Covered by `Integration/MemberReportExportTests.cs` (5) plus the existing unit tests. Teeth
+  verified: removing the sort reds the sort test, restoring the Status column reds that one.
 
 - [ ] **`SelectMemberServiceRoles` guards the GET but not the POST.**
   `Pages/Members/SelectMemberServiceRoles.cshtml.cs` — `OnGetAsync` redirects a prospective
@@ -212,13 +222,18 @@ State: `main`, 117 tests, 0 warnings, CI green. **Sections 1 and 2 are clear.**
 - [ ] **Two accounts have the `Member` role with a null `MembershipStatus`** —
   `fshromen@yahoo.com`, `tim@yahoo.com`. Predates the mirrored-role design; self-heals on save.
 
-- [ ] **CSV built with `+=` in a loop.** `MemberReport.cshtml.cs:174,182` — O(n²) on a full
-  export. `StringBuilder` is used elsewhere (`Services/FileDropEmailSender.cs:47`).
+- [x] ~~**CSV built with `+=` in a loop.**~~ Fixed - `StringBuilder`, matching
+  `Services/FileDropEmailSender.cs:47`. Done in the same pass as the two items above because
+  it is the same twenty lines. No test: the output is identical and only the copying is gone,
+  so there is nothing to assert that the existing export tests do not already cover.
 
-- [ ] **Logging uses string interpolation with user input.** `AuthController.cs:47,54,59,77`
-  and throughout `Pages/Members/*` — unescaped email text reaches the log stream and the
-  message formats even when the level is disabled. Structured templates are used correctly
-  elsewhere, e.g. `MemberInfo.cshtml.cs:137,162`.
+- [x] ~~**Logging uses string interpolation with user input.**~~ Already fixed; no code change.
+  The cited lines were real when written - `git show f97ca0c:StewardshipSurvey/Controllers/Api/AuthController.cs`
+  still has all four - but `e3af9df` rewrote them into structured templates while adding the
+  lockout branches, and `5c714f8` did the `Pages/Members/*` half while fixing the survey
+  failure handling. Both were side effects of adjacent work rather than deliberate.
+  Verified empty: `grep -rE 'Log(Information|Error|Warning|Debug)\(\s*\$"' StewardshipSurvey/`
+  returns nothing.
 
 ---
 

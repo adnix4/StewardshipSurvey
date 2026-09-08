@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using Microsoft.Extensions.DependencyInjection;
 using StewardshipSurvey.Data;
 using StewardshipSurvey.Models;
@@ -74,10 +74,14 @@ namespace StewardshipSurvey.Tests.Integration
 
             var staff = Unique("reportstaff");
             await _factory.CreateUserAsync(staff, status: MembershipStatus.Member, roles: Roles.Staff);
-            var client = await _factory.CreateSignedInClientAsync(staff);
 
-            var csv = await client.GetStringAsync($"/Staff/MemberReport?handler=Export&searchTerm={tag}");
-            var json = await client.GetStringAsync($"/api/reports/members?searchTerm={tag}");
+            // Two clients on purpose: the Razor page authenticates by cookie, the API by
+            // bearer token. They stopped being interchangeable when the API went bearer-only.
+            var page = await _factory.CreateSignedInClientAsync(staff);
+            var api = await _factory.CreateBearerClientAsync(staff);
+
+            var csv = await page.GetStringAsync($"/Staff/MemberReport?handler=Export&searchTerm={tag}");
+            var json = await api.GetStringAsync($"/api/reports/members?searchTerm={tag}");
 
             Assert.Contains($"Both{tag}", csv);
             Assert.Contains($"Both{tag}", json);

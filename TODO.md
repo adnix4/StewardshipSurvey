@@ -180,19 +180,33 @@ found while fixing the others rather than present at the start.
   demand, and there are no seams here to substitute one — the project mocks nothing. The
   change is a strict improvement on discarding the result, but it is unproven.
 
-- [ ] **API test coverage is still thin.** No longer blocked — the bearer-auth item above is
-  done and `MembersApiTests` (7) plus `BearerAuthTests` (11) now cover authentication and the
-  members endpoints. The other 12 endpoints across `Interests`, `Involvements`, `ServiceRoles`
-  and `Reports` still have no behavioural coverage of their own.
+- [x] ~~**API test coverage is still thin.**~~ Covered. `Integration/SurveyApiTests.cs` — 34
+  tests across the three catalogues, the three per-member get/save pairs and the staff report,
+  mostly as theories over the route prefix since the three controllers are the same shape.
+  **Writing them found two defects, in all three controllers.** A repeated id violated the
+  composite primary key and came back a 500 — the Razor pages have called `.Distinct()` since
+  the survey work, the API never did. An id that does not exist reached the database, failed
+  the foreign key and also came back a 500, reporting the caller's mistake as the server's;
+  it is a 400 naming the ids now.
+  Teeth verified: removing both guards from one controller reds exactly that route's two
+  tests and leaves the other two green.
 
-- [ ] **The API accepts a cookie on state-changing endpoints with no antiforgery token.**
-  `PUT /api/members/current` and the three `POST .../current` endpoints authenticate by cookie
-  as well as by bearer, and `[ApiController]` applies no antiforgery check — so a browser that
-  is signed in attaches the cookie automatically. Largely blunted today by the closed CORS
-  policy, which stops a cross-site JSON request being sent at all, and it predates the
-  bearer-auth work rather than being introduced by it. The clean fix is to make the API
-  bearer-only, which would mean rewriting the seven cookie-authenticated `MembersApiTests`;
-  worth doing deliberately rather than as a side effect. Found while designing the bearer fix.
+- [x] ~~**The API accepts a cookie on state-changing endpoints with no antiforgery token.**~~
+  Fixed — the API is bearer-only. Each controller's `[Authorize]` names the scheme, so the
+  cookie a browser attaches automatically is no longer accepted there. The design agent that
+  reviewed the bearer work argued for this at the time; I kept the additive version so the
+  change stayed small, and did it deliberately here instead.
+  Two pieces of scaffolding went with it, each removed only after deleting it and watching the
+  suite stay green rather than on reasoning: the policy scheme that chose cookie-or-bearer per
+  request has nothing left to decide, and the cookie handler's `/api` 401 special-casing is
+  unreachable now that the bearer handler owns every `/api` challenge.
+  The seven cookie-authenticated `MembersApiTests` are ported. They guard the section 1
+  disclosure fix, so the port was checked the way the original was — neutralise the ownership
+  guard and confirm the same three attack tests go red. They do.
+  Covered by two new tests in `BearerAuthTests`: a cookie client that reaches a Razor page
+  perfectly well is refused by `GET /api/members/current`, and cannot make a state-changing
+  POST. The structural test now also requires every API controller to name the bearer scheme,
+  because forgetting it on a new controller would be silent.
 
 - [ ] **The MAUI client has not caught up with the server.**
   `StewardshipSurvey.Maui/Services/AuthenticationService.cs` never calls `/api/auth/logout`

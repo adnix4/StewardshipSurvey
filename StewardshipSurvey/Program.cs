@@ -37,36 +37,24 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
 
 builder.Services.AddRazorPages();
 
-// API bearer authentication, alongside the Identity cookie rather than instead of it.
+// API bearer authentication, added alongside the Identity cookie without disturbing it.
 //
-// AddDefaultIdentity makes the cookie the default authenticate *and* challenge scheme, which
-// is why an Authorization: Bearer header was ignored outright - the MAUI app has been sending
-// one to every endpoint and no part of the server ever looked at it.
+// AddDefaultIdentity makes the cookie the default authenticate and challenge scheme, which is
+// why an Authorization: Bearer header used to be ignored outright - the MAUI app had been
+// sending one to every endpoint and no part of the server ever looked at it.
 //
-// The policy scheme below picks per request: bearer header present, use the bearer handler;
-// otherwise the cookie. Selecting on the header rather than on an /api path prefix keeps the
-// change additive - callers that authenticate the API by cookie today, including this
-// project's own API tests, keep working - and it means no [Authorize] attribute has to name a
-// scheme, so a controller added later cannot forget to.
+// The defaults are deliberately left alone here. Razor Pages keep challenging via the cookie,
+// and every API controller names the bearer scheme on its own [Authorize] - which is also what
+// makes the API bearer-*only*: a browser attaches its cookie automatically and [ApiController]
+// applies no antiforgery check, so accepting one would put every state-changing endpoint one
+// cross-site request away from a member's browser.
+//
+// Naming the scheme per controller is easy to forget on a new one, and forgetting is silent,
+// so Unit/ApiControllerAuthorizationTests enforces it structurally.
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
 builder.Services.AddScoped<AccessTokenIssuer>();
 
-builder.Services.AddAuthentication(options =>
-    {
-        options.DefaultScheme = AuthSchemes.CookieOrBearer;
-        options.DefaultAuthenticateScheme = AuthSchemes.CookieOrBearer;
-        options.DefaultChallengeScheme = AuthSchemes.CookieOrBearer;
-    })
-    .AddPolicyScheme(AuthSchemes.CookieOrBearer, "Identity cookie or API bearer token", options =>
-    {
-        options.ForwardDefaultSelector = context =>
-            context.Request.Headers.Authorization
-                .Any(value => value != null &&
-                     value.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-                ? JwtBearerDefaults.AuthenticationScheme
-                : IdentityConstants.ApplicationScheme;
-    })
-    .AddJwtBearer();
+builder.Services.AddAuthentication().AddJwtBearer();
 
 // Configured through the options system rather than inline, so the signing key is read when
 // the handler is first used rather than while the container is still being built. Reading it
@@ -139,37 +127,6 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
                 }
         };
     });
-
-// A JSON client cannot read a redirect to a login page. Without this an unauthenticated API
-// call returns 302 and an HTML form, which the MAUI app can only interpret as success with
-// unreadable content. Same reasoning that replaced Forbid() with an explicit StatusCode(403)
-// in MembersController.
-builder.Services.ConfigureApplicationCookie(options =>
-{
-    options.Events.OnRedirectToLogin = context =>
-    {
-        if (context.Request.Path.StartsWithSegments("/api"))
-        {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            return context.Response.WriteAsJsonAsync(new { message = "Unauthorized" });
-        }
-
-        context.Response.Redirect(context.RedirectUri);
-        return Task.CompletedTask;
-    };
-
-    options.Events.OnRedirectToAccessDenied = context =>
-    {
-        if (context.Request.Path.StartsWithSegments("/api"))
-        {
-            context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            return context.Response.WriteAsJsonAsync(new { message = "Forbidden" });
-        }
-
-        context.Response.Redirect(context.RedirectUri);
-        return Task.CompletedTask;
-    };
-});
 
 // Outgoing mail. AddDefaultIdentity registers NoOpEmailSender with TryAddTransient, which
 // silently discarded every confirmation email; registering here afterwards replaces it.

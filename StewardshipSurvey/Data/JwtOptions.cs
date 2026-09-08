@@ -1,4 +1,4 @@
-namespace StewardshipSurvey.Data
+﻿namespace StewardshipSurvey.Data
 {
     /// <summary>
     /// Signing and validation settings for the API's bearer tokens.
@@ -67,14 +67,4 @@ namespace StewardshipSurvey.Data
         public const string SecurityStamp = "sstamp";
     }
 
-    /// <summary>Authentication scheme names owned by this application.</summary>
-    public static class AuthSchemes
-    {
-        /// <summary>
-        /// The policy scheme that picks between the Identity cookie and the bearer handler per
-        /// request. Registered as the default so no <c>[Authorize]</c> attribute has to name a
-        /// scheme - and so a controller added later cannot forget to.
-        /// </summary>
-        public const string CookieOrBearer = "CookieOrBearer";
-    }
 }

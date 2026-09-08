@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,7 +11,7 @@ namespace StewardshipSurvey.Controllers.Api
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class MembersController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -61,10 +62,11 @@ namespace StewardshipSurvey.Controllers.Api
             // Decided before the lookup on purpose. Answering 403 for a forbidden id but 404
             // for a missing one would still let a caller map which ids exist.
             //
-            // Not Forbid(): with no bearer scheme registered this endpoint authenticates by
-            // cookie, and the cookie handler turns a forbid into a 302 to the Access Denied
-            // page - an HTML redirect the mobile client cannot interpret. Verified in
-            // MembersApiTests. Say 403 outright until the bearer scheme lands.
+            // Explicit 403 rather than Forbid(). It was written this way because the endpoint
+            // authenticated by cookie and the cookie handler turns a forbid into a 302 to the
+            // Access Denied page, which a JSON client cannot read. The endpoint is bearer-only
+            // now, so Forbid() would also produce a plain 403 - but stating the status is still
+            // the clearer thing to read, and it cannot be re-broken by a scheme change.
             if (!isOwnProfile && !isPrivileged)
                 return StatusCode(StatusCodes.Status403Forbidden);
 

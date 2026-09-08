@@ -1,4 +1,5 @@
-using System.Reflection;
+﻿using System.Reflection;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -42,6 +43,29 @@ namespace StewardshipSurvey.Tests.Unit
                 "without an attribute would be public: " + string.Join(", ", unguarded) +
                 ". Add [Authorize] to the class and [AllowAnonymous] to the actions that are " +
                 "deliberately public.");
+        }
+
+
+        [Fact]
+        public void Every_api_controller_is_bearer_only()
+        {
+            // A cookie is attached automatically by the browser and nothing here checks an
+            // antiforgery token, so a controller that accepts one is a cross-site write away
+            // from being a problem. Naming the scheme is what keeps that shut, and forgetting
+            // to name it on a new controller is silent - hence this test rather than a request.
+            var wrong = ApiControllers()
+                .Select(t => new { t.Name, Attr = t.GetCustomAttribute<AuthorizeAttribute>(inherit: true) })
+                .Where(x => x.Attr == null
+                            || x.Attr.AuthenticationSchemes != JwtBearerDefaults.AuthenticationScheme)
+                .Select(x => x.Name)
+                .OrderBy(n => n)
+                .ToList();
+
+            Assert.True(wrong.Count == 0,
+                "These API controllers do not restrict themselves to the bearer scheme, so they " +
+                "would accept the Identity cookie: " + string.Join(", ", wrong) +
+                ". Add AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme to the " +
+                "class-level [Authorize].");
         }
 
         [Fact]

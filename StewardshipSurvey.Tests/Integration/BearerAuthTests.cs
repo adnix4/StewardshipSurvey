@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Identity;
@@ -27,6 +27,41 @@ namespace StewardshipSurvey.Tests.Integration
         public BearerAuthTests(StewardshipWebApplicationFactory factory) => _factory = factory;
 
         private static string Unique(string prefix) => $"{prefix}-{Guid.NewGuid():N}@stmark.local";
+
+        [Fact]
+        public async Task A_cookie_is_not_accepted_by_the_api()
+        {
+            // The API used to take either a cookie or a token. A browser attaches its cookie
+            // automatically and [ApiController] applies no antiforgery check, so every
+            // state-changing endpoint was reachable from another site by a signed-in member's
+            // browser. Bearer-only closes that: possessing the token requires having read it.
+            var email = Unique("cookieonly");
+            await _factory.CreateUserAsync(email, status: MembershipStatus.Member);
+
+            var cookieClient = await _factory.CreateSignedInClientAsync(email);
+
+            // The same account, same session, reaching a Razor page perfectly well.
+            Assert.Equal(HttpStatusCode.OK,
+                (await cookieClient.GetAsync("/Members/MemberInfo")).StatusCode);
+
+            Assert.Equal(HttpStatusCode.Unauthorized,
+                (await cookieClient.GetAsync("/api/members/current")).StatusCode);
+        }
+
+        [Fact]
+        public async Task A_cookie_cannot_make_a_state_changing_api_call()
+        {
+            // The half that actually mattered: a cross-site write.
+            var email = Unique("cookiewrite");
+            await _factory.CreateUserAsync(email, status: MembershipStatus.Member);
+
+            var cookieClient = await _factory.CreateSignedInClientAsync(email);
+
+            var response = await cookieClient.PostAsJsonAsync(
+                "/api/interests/current", new[] { 1 });
+
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        }
 
         [Fact]
         public async Task A_bearer_token_authenticates_an_api_call()

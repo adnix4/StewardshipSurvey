@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,10 +11,11 @@ namespace StewardshipSurvey.Controllers.Api
 {
     [ApiController]
     [Route("api/[controller]")]
-    // Default deny. Without this the class opts in per action, so an action added later with
-    // no attribute is public - the failure mode is silence, which is the wrong way round for
-    // authorisation. The catalogue endpoints below opt back out explicitly.
-    [Authorize]
+    // Default deny, and bearer only. Without the class-level attribute an action added later
+    // with no attribute is public, and without the scheme a browser cookie is accepted -
+    // which, with no antiforgery check on an [ApiController], is a cross-site write.
+    // The catalogue endpoint below opts back out explicitly.
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class ServiceRolesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -45,7 +47,6 @@ namespace StewardshipSurvey.Controllers.Api
         }
 
         [HttpGet("current")]
-        [Authorize]
         public async Task<ActionResult<List<MemberServiceRoleDto>>> GetCurrentMemberServiceRoles()
         {
             var user = await _userManager.GetUserAsync(User);
@@ -67,7 +68,6 @@ namespace StewardshipSurvey.Controllers.Api
         }
 
         [HttpPost("current")]
-        [Authorize]
         public async Task<ActionResult> UpdateCurrentMemberServiceRoles([FromBody] List<int> involvementAreaIds)
         {
             var user = await _userManager.GetUserAsync(User);
@@ -76,10 +76,31 @@ namespace StewardshipSurvey.Controllers.Api
 
             int memberId = user.MemberID.Value;
 
+            // Distinct, because the key is (MemberID, InvolvementAreaID): a body repeating an id
+            // used to violate the primary key and come back a 500. The Razor pages have always
+            // done this; the API never did.
+            var ids = (involvementAreaIds ?? new List<int>()).Distinct().ToList();
+
+            // An id that does not exist used to reach the database and fail the foreign key,
+            // which also surfaced as a 500 - the caller's mistake reported as the server's.
+            var known = await _context.InvolvementAreas
+                .Where(a => ids.Contains(a.InvolvementAreaID))
+                .Select(a => a.InvolvementAreaID)
+                .ToListAsync();
+
+            var unknown = ids.Except(known).ToList();
+            if (unknown.Count > 0)
+            {
+                return BadRequest(new
+                {
+                    message = $"Unknown service role id(s): {string.Join(", ", unknown)}"
+                });
+            }
+
             var existing = _context.MemberServiceRoles.Where(msr => msr.MemberID == memberId);
             _context.MemberServiceRoles.RemoveRange(existing);
 
-            foreach (var involvementId in involvementAreaIds)
+            foreach (var involvementId in ids)
             {
                 _context.MemberServiceRoles.Add(new MemberServiceRole
                 {

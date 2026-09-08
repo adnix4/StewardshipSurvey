@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StewardshipSurvey.Data;
@@ -9,7 +10,7 @@ namespace StewardshipSurvey.Controllers.Api
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Staff,Admin")]
+    [Authorize(Roles = "Staff,Admin", AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class ReportsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;

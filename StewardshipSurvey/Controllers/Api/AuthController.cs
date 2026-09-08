@@ -1,3 +1,4 @@
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -9,9 +10,10 @@ namespace StewardshipSurvey.Controllers.Api
 {
     [ApiController]
     [Route("api/[controller]")]
-    // Default deny, like every other API controller. Login and Refresh opt back out below -
-    // they have to be reachable without a token, that being the point of them.
-    [Authorize]
+    // Default deny, and bearer only. A cookie is not accepted here: the browser attaches one
+    // automatically, and these endpoints have no antiforgery check, so accepting it made every
+    // state-changing endpoint reachable cross-site. Login and Refresh opt back out below.
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class AuthController : ControllerBase
     {
         private readonly SignInManager<ApplicationUser> _signInManager;
@@ -183,7 +185,6 @@ namespace StewardshipSurvey.Controllers.Api
         }
 
         [HttpPost("logout")]
-        [Authorize]
         public async Task<IActionResult> Logout()
         {
             // Clears the cookie, which matters for a browser caller.

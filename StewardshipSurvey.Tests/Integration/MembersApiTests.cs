@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using StewardshipSurvey.Data;
@@ -16,8 +16,10 @@ namespace StewardshipSurvey.Tests.Integration
     /// not a broken assertion.
     /// </para>
     /// <para>
-    /// The API authenticates by cookie - no bearer scheme is registered - so every client
-    /// here signs in through the real Identity UI.
+    /// The API is bearer-only, so every client here signs in through
+    /// <c>POST /api/auth/login</c> and carries a token. It used to accept the Identity cookie
+    /// as well, which these tests relied on; that was removed because a browser attaches a
+    /// cookie automatically and an [ApiController] applies no antiforgery check.
     /// </para>
     /// </summary>
     public class MembersApiTests : IClassFixture<StewardshipWebApplicationFactory>
@@ -34,7 +36,7 @@ namespace StewardshipSurvey.Tests.Integration
 
             await StampAddressAsync(user.MemberID!.Value, "12 Own Street");
 
-            var client = await _factory.CreateSignedInClientAsync(user.Email!);
+            var client = await _factory.CreateBearerClientAsync(user.Email!);
             var response = await client.GetAsync($"/api/members/{user.MemberID}");
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -51,7 +53,7 @@ namespace StewardshipSurvey.Tests.Integration
             var snooper = await _factory.CreateUserAsync(
                 Unique("snooper"), status: MembershipStatus.Member);
 
-            var client = await _factory.CreateSignedInClientAsync(snooper.Email!);
+            var client = await _factory.CreateBearerClientAsync(snooper.Email!);
             var response = await client.GetAsync($"/api/members/{victim.MemberID}");
 
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -71,7 +73,7 @@ namespace StewardshipSurvey.Tests.Integration
 
             var snooper = await _factory.CreateUserAsync(
                 Unique("enum-snooper"), status: MembershipStatus.Member);
-            var client = await _factory.CreateSignedInClientAsync(snooper.Email!);
+            var client = await _factory.CreateBearerClientAsync(snooper.Email!);
 
             for (var id = 1; id <= victim.MemberID!.Value + 2; id++)
             {
@@ -98,7 +100,7 @@ namespace StewardshipSurvey.Tests.Integration
             var reader = await _factory.CreateUserAsync(
                 Unique(role.ToLowerInvariant()), status: MembershipStatus.Member, roles: role);
 
-            var client = await _factory.CreateSignedInClientAsync(reader.Email!);
+            var client = await _factory.CreateBearerClientAsync(reader.Email!);
             var response = await client.GetAsync($"/api/members/{member.MemberID}");
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -117,7 +119,7 @@ namespace StewardshipSurvey.Tests.Integration
 
             var profileless = await _factory.CreateUserAsync(Unique("profileless"));
 
-            var client = await _factory.CreateSignedInClientAsync(profileless.Email!);
+            var client = await _factory.CreateBearerClientAsync(profileless.Email!);
             var response = await client.GetAsync($"/api/members/{subject.MemberID}");
 
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -145,7 +147,7 @@ namespace StewardshipSurvey.Tests.Integration
                 Unique("current"), status: MembershipStatus.Member);
             await StampAddressAsync(user.MemberID!.Value, "5 Current Close");
 
-            var client = await _factory.CreateSignedInClientAsync(user.Email!);
+            var client = await _factory.CreateBearerClientAsync(user.Email!);
             var response = await client.GetAsync("/api/members/current");
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);

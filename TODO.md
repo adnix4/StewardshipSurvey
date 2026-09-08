@@ -352,15 +352,12 @@ are deletes against your development database, and the connection string is the 
 standing between the script and the wrong one. It is written to be run twice - as committed it
 ends in `ROLLBACK`, so the first run shows what would go and changes nothing.
 
-- [ ] **Five leftover test accounts** from verification runs: `devlink-`, `diag-`, `rctest-`,
-  `smtpfail-`, `verify-` (all `@stmark.local`). Script section 1. The delete order is not
-  arbitrary: `AspNetUsers.MemberID` is a `NO ACTION` foreign key, so the user row goes before
-  the profile it points at, and deleting the profile then cascades to that member's three sets
-  of answers. Same order, same reason, as `DeactivatedUserPurgeService`.
-- [ ] **`staff@stmark.local` is polluted** — its profile reads "Test Staffer" with contact
-  preference Email. Script section 2, guarded so it only fires while the row still looks like
-  the test data. The name fields go back to `NULL` rather than `''`: the account genuinely had
-  no name before, and that is absence rather than emptiness.
+- [x] ~~**Five leftover test accounts**~~ Deleted. All five had `MemberID` NULL, so no profile
+  and no survey answers hung off them — the cascade the script is careful about turned out to
+  have nothing to carry. 17 accounts down to 12.
+- [x] ~~**`staff@stmark.local` is polluted**~~ Cleared. Profile 7 read "Test Staffer" with
+  PrefersEmail set; name fields are now empty and all three contact preferences off. The
+  account itself is untouched and still signs in.
 - [ ] **Rotate `Jwt:Key`** in local user secrets. Command in `scripts/README.md`.
   **This is no longer cosmetic.** When this item was written the key only signed tokens and
   nothing validated them, so rotating it had no observable effect. The key is now what the

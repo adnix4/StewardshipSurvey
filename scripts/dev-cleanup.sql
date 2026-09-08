@@ -17,6 +17,11 @@
     Services/DeactivatedUserPurgeService.cs.
 */
 
+-- QUOTED_IDENTIFIER must be ON to delete from AspNetUsers: Identity's unique indexes on the
+-- normalised name and email columns refuse a DELETE otherwise (Msg 1934). sqlcmd defaults it
+-- OFF, unlike SSMS and every application connection, so a script that works when pasted into
+-- SSMS fails from the command line without this line.
+SET QUOTED_IDENTIFIER ON;
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
 
@@ -78,11 +83,12 @@ FROM   MemberInfos m
 JOIN   AspNetUsers u ON u.MemberID = m.MemberID
 WHERE  u.Email = 'staff@stmark.local';
 
--- NULL rather than '': FirstName and LastName are nullable and the account genuinely had no
--- name before the test data was written over it, so this restores absence, not emptiness.
+-- Empty strings, not NULL. The C# properties are `string?`, which is misleading: both carry
+-- [Required], so the columns are NOT NULL and a NULL here fails with Msg 515. Empty is the
+-- closest the schema allows to the "no name" this account had before.
 UPDATE m
-SET    m.FirstName    = NULL,
-       m.LastName     = NULL,
+SET    m.FirstName    = '',
+       m.LastName     = '',
        m.PrefersEmail = 0,
        m.PrefersPhone = 0,
        m.PrefersText  = 0,

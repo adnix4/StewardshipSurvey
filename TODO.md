@@ -6,7 +6,8 @@ can go straight to the code without re-deriving anything.
 Ticked items are kept rather than deleted: what was wrong and why it was wrong is the
 useful part, and several of these were found while fixing something else.
 
-State: `main`, 117 tests, 0 warnings, CI green. **Sections 1 and 2 are clear.**
+State: `main`, 137 tests, 0 warnings, CI green. **Sections 1, 2 and 3 are clear except for
+API endpoint coverage, the cookie/antiforgery item and the MAUI client.**
 
 ---
 

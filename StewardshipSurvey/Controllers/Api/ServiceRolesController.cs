@@ -10,6 +10,10 @@ namespace StewardshipSurvey.Controllers.Api
 {
     [ApiController]
     [Route("api/[controller]")]
+    // Default deny. Without this the class opts in per action, so an action added later with
+    // no attribute is public - the failure mode is silence, which is the wrong way round for
+    // authorisation. The catalogue endpoints below opt back out explicitly.
+    [Authorize]
     public class ServiceRolesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;

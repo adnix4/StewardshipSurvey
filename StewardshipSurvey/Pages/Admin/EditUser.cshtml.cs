@@ -14,15 +14,18 @@ namespace StewardshipSurvey.Pages.Admin
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<EditUserModel> _logger;
 
         public EditUserModel(
             UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole> roleManager,
-            ApplicationDbContext context)
+            ApplicationDbContext context,
+            ILogger<EditUserModel> logger)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _context = context;
+            _logger = logger;
         }
 
         public ApplicationUser? CurrentUser { get; set; }
@@ -125,17 +128,24 @@ namespace StewardshipSurvey.Pages.Admin
             rolesToAdd.RemoveAll(r => Data.Roles.StatusMirrored.Contains(r));
             rolesToRemove.RemoveAll(r => Data.Roles.StatusMirrored.Contains(r));
 
-            await _userManager.AddToRolesAsync(user, rolesToAdd);
-           
-            await _userManager.RemoveFromRolesAsync(user, rolesToRemove);
+            // Both results were discarded and the page redirected as success regardless. A
+            // concurrency stamp mismatch or a validation failure left the admin looking at a
+            // "saved" screen with nothing saved.
+            if (!await ApplyAsync(() => _userManager.AddToRolesAsync(user, rolesToAdd), id)
+                || !await ApplyAsync(() => _userManager.RemoveFromRolesAsync(user, rolesToRemove), id))
+            {
+                return Page();
+            }
 
             // Membership status lives on the profile; the roles mirror it.
             var profile = await _context.MemberInfos
                 .FirstOrDefaultAsync(m => m.ApplicationUser!.Id == user.Id);
 
-            if (profile != null && profile.MembershipStatus != membershipStatus)
+            var statusChanged = profile != null && profile.MembershipStatus != membershipStatus;
+
+            if (statusChanged)
             {
-                profile.MembershipStatus = membershipStatus;
+                profile!.MembershipStatus = membershipStatus;
                 profile.UpdatedDate = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
             }
@@ -144,8 +154,47 @@ namespace StewardshipSurvey.Pages.Admin
             {
                 await MembershipStatusRoles.SyncAsync(_userManager, user, profile.MembershipStatus);
             }
-          
+
+            // Role claims live in the signed-in cookie and in any bearer token already issued,
+            // so changing the role store alone left the target seeing their old menu until they
+            // signed in again - and left an outstanding API token carrying the old roles until
+            // it expired. Moving the security stamp ends both. Deactivation has always done
+            // this (OnPostDeactivateAsync); the ordinary role change did not.
+            if (rolesToAdd.Count > 0 || rolesToRemove.Count > 0 || statusChanged)
+            {
+                await _userManager.UpdateSecurityStampAsync(user);
+            }
+
             return RedirectToPage("/Admin/Users");
+        }
+
+        /// <summary>
+        /// Runs an Identity operation and reports a failure instead of redirecting as success.
+        /// <para>
+        /// Four call sites in this file threw the <see cref="IdentityResult"/> away and carried
+        /// straight on to the redirect, so a concurrency-stamp mismatch or a validation error
+        /// showed the admin a saved screen with nothing saved.
+        /// <c>DeactivatedUserPurgeService</c> has always checked its results; this brings the
+        /// page into line.
+        /// </para>
+        /// </summary>
+        /// <returns>True when the operation succeeded. On failure the caller returns Page().</returns>
+        private async Task<bool> ApplyAsync(Func<Task<IdentityResult>> operation, string id)
+        {
+            var result = await operation();
+
+            if (result.Succeeded)
+            {
+                return true;
+            }
+
+            var errors = string.Join("; ", result.Errors.Select(e => e.Description));
+            _logger.LogError("Identity operation failed for user {UserId}: {Errors}", id, errors);
+            ModelState.AddModelError(string.Empty, $"The change could not be saved: {errors}");
+
+            // Repopulate the form, or the admin gets an error above an empty page.
+            await OnGetAsync(id);
+            return false;
         }
 
         /// <summary>
@@ -215,16 +264,23 @@ namespace StewardshipSurvey.Pages.Admin
             var currentRoles = await _userManager.GetRolesAsync(user);
             var elevated = currentRoles.Where(r => Data.Roles.Elevated.Contains(r)).ToList();
 
-            if (elevated.Count > 0)
+            if (elevated.Count > 0
+                && !await ApplyAsync(() => _userManager.RemoveFromRolesAsync(user, elevated), id))
             {
-                await _userManager.RemoveFromRolesAsync(user, elevated);
+                return Page();
             }
 
             user.DeactivatedRoles = string.Join(",", elevated);
             user.DeactivatedDate = DateTime.UtcNow;
             user.LockoutEnabled = true;
             user.LockoutEnd = DateTimeOffset.MaxValue;
-            await _userManager.UpdateAsync(user);
+
+            // Discarding this one was the worst of the four: a failure here means the account
+            // was never actually locked out, while the screen reported it deactivated.
+            if (!await ApplyAsync(() => _userManager.UpdateAsync(user), id))
+            {
+                return Page();
+            }
 
             // Invalidate any session this person currently has open.
             await _userManager.UpdateSecurityStampAsync(user);

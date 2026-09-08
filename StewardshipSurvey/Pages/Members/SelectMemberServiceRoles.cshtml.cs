@@ -77,6 +77,16 @@ namespace StewardshipSurvey.Pages.Members
         {
             try
             {
+                // The same guard OnGetAsync applies. It used to cover only the GET, so a
+                // prospective member who knew the URL could POST straight past the redirect and
+                // save answers to a step that does not apply to them. The helper's own doc
+                // comment promised more than half a page.
+                if (await IsProspectiveMemberAsync())
+                {
+                    _logger.LogInformation("Prospective member blocked from saving service roles");
+                    return RedirectToPage("/Members/MemberInfo");
+                }
+
                 var user = await _userManager.GetUserAsync(User);
                 if (user?.MemberID == null)
                 {

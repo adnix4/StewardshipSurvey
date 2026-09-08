@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using StewardshipSurvey.Models;
 using System.Linq;
 
 namespace StewardshipSurvey.Data
@@ -29,6 +31,7 @@ namespace StewardshipSurvey.Data
             var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
             var configuration = serviceProvider.GetRequiredService<IConfiguration>();
             var logger = serviceProvider.GetRequiredService<ILogger<AdminSeeder>>();
+            var context = serviceProvider.GetRequiredService<ApplicationDbContext>();
 
             string[] roles = Roles.All;
 
@@ -99,6 +102,7 @@ namespace StewardshipSurvey.Data
             var users = userManager.Users.ToList();
 
             var confirmedByBackfill = 0;
+            var statusRolesRepaired = 0;
 
             foreach (var user in users)
             {
@@ -117,6 +121,29 @@ namespace StewardshipSurvey.Data
                     await userManager.UpdateAsync(user);
                     confirmedByBackfill++;
                 }
+
+                // MembershipStatusRoles.SyncAsync only ever runs from a write - the member's
+                // own profile save, or an admin edit - so an account that has not been saved
+                // since the mirrored-role design arrived keeps whatever roles it had. Two
+                // accounts held Member with no MembershipStatus at all, a combination the sync
+                // cannot produce and nothing repaired. Reconciling here means it self-heals
+                // instead of drifting further.
+                var profile = await context.MemberInfos
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(m => m.ApplicationUser!.Id == user.Id);
+
+                if (await StatusRolesAreStaleAsync(userManager, user, profile?.MembershipStatus))
+                {
+                    await MembershipStatusRoles.SyncAsync(userManager, user, profile?.MembershipStatus);
+                    statusRolesRepaired++;
+                }
+            }
+
+            if (statusRolesRepaired > 0)
+            {
+                logger.LogInformation(
+                    "Reconciled the membership status role on {Count} account(s).",
+                    statusRolesRepaired);
             }
 
             if (confirmedByBackfill > 0)
@@ -126,6 +153,26 @@ namespace StewardshipSurvey.Data
                     confirmedByBackfill);
             }
 
+        }
+
+        /// <summary>
+        /// True when the account's status-mirrored roles do not match <paramref name="status"/>.
+        /// Checked before syncing so the log line counts real repairs rather than every account.
+        /// </summary>
+        internal static async Task<bool> StatusRolesAreStaleAsync(
+            UserManager<ApplicationUser> userManager, ApplicationUser user, MembershipStatus? status)
+        {
+            var desired = MembershipStatusRoles.RoleFor(status);
+
+            foreach (var role in Roles.StatusMirrored)
+            {
+                if (await userManager.IsInRoleAsync(user, role) != (role == desired))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

@@ -167,9 +167,16 @@ State: `main`, 117 tests, 0 warnings, CI green. **Sections 1 and 2 are clear.**
   Note the path in this item was wrong: the file is `Pages/Staff/MemberReport.cshtml.cs`, not
   `Pages/Admin/`.
 
-- [ ] **Role changes applied without checking the result.**
-  `Pages/Admin/EditUser.cshtml.cs:128,130` (also 220, 227) discard the `IdentityResult` and
-  redirect as success. `DeactivatedUserPurgeService` does check — the codebase is inconsistent.
+- [x] ~~**Role changes applied without checking the result.**~~ Fixed. All four call sites go
+  through a private `ApplyAsync`, which checks `.Succeeded`, logs the joined error
+  descriptions and surfaces them through `ModelState` — the pattern
+  `DeactivatedUserPurgeService:108-115` already used. The page had no logger at all; one is
+  injected now.
+  The worst of the four was `UpdateAsync` on the deactivate path: a failure there meant the
+  account was never actually locked out while the screen reported it deactivated.
+  **Honest limit:** no test. Making Identity fail these calls needs a store that misbehaves on
+  demand, and there are no seams here to substitute one — the project mocks nothing. The
+  change is a strict improvement on discarding the result, but it is unproven.
 
 - [ ] **API test coverage is still thin.** No longer blocked — the bearer-auth item above is
   done and `MembersApiTests` (7) plus `BearerAuthTests` (11) now cover authentication and the
@@ -204,23 +211,43 @@ State: `main`, 117 tests, 0 warnings, CI green. **Sections 1 and 2 are clear.**
   Covered by `Integration/MemberReportExportTests.cs` (5) plus the existing unit tests. Teeth
   verified: removing the sort reds the sort test, restoring the Status column reds that one.
 
-- [ ] **`SelectMemberServiceRoles` guards the GET but not the POST.**
-  `Pages/Members/SelectMemberServiceRoles.cshtml.cs` — `OnGetAsync` redirects a prospective
-  member away via `IsProspectiveMemberAsync`; `OnPostAsync` has no such check, so a direct
-  POST saves service roles for someone the step does not apply to. Not an escalation — they
-  can only write their own rows — but the guard is described as "the real guard" and only
-  covers half the page. Found while fixing the failure-handling item in section 2.
+- [x] ~~**`SelectMemberServiceRoles` guards the GET but not the POST.**~~ Fixed — `OnPostAsync`
+  calls the same `IsProspectiveMemberAsync` and redirects, so the helper's doc comment is now
+  true of the whole page rather than half of it.
+  Covered in `AdminAndGuardTests`: a prospective member posting directly is redirected and
+  writes no rows. Teeth verified — removing the guard reds it.
 
-- [ ] **Three API controllers are anonymous-by-default.** `InterestsController`,
-  `InvolvementsController`, `ServiceRolesController` have no class-level `[Authorize]` — only
-  per-action opt-in, so any action added without an attribute is public.
+- [x] ~~**Three API controllers are anonymous-by-default.**~~ Fixed — and it was four.
+  `AuthController` had the same shape and is not in the original list; the test found it, not
+  I did. All four now carry class-level `[Authorize]`, with `[AllowAnonymous]` on the five
+  actions that are deliberately public (the three catalogue lists, plus login and refresh).
+  **This could not be tested through HTTP.** Nothing was exposed before the fix — every
+  `current` action had its own attribute — so no request behaves differently. The defect is in
+  what happens next, when an action is added without one. `Unit/ApiControllerAuthorizationTests.cs`
+  therefore tests it structurally: every controller in the API namespace must deny by default,
+  the anonymous actions are an explicit allow-list, and a third test pins the controller names
+  so a namespace rename cannot turn the other two into no-ops that pass forever.
+  Teeth verified: removing a class-level attribute reds it and names the controller.
 
-- [ ] **Nav lags after an admin changes membership status.** Role claims live in the auth
-  cookie; updates on re-login or at the next security-stamp validation (30 min default). Page
-  guards read the database, so cosmetic only, never an access hole.
+- [x] ~~**Nav lags after an admin changes membership status.**~~ Fixed, and it stopped being
+  cosmetic while this was open. `EditUser.OnPostAsync` now calls `UpdateSecurityStampAsync`
+  when roles or status actually changed — the same lever `OnPostDeactivateAsync:230` already
+  used. Once bearer tokens became real, a stale role claim was no longer only a wrong menu: an
+  outstanding API token carried the old roles until it expired.
+  Guarded both ways: one test asserts the stamp moves and an existing token stops working,
+  another asserts an edit that changes nothing leaves the session alone — the bump signs the
+  person out everywhere, so it must not fire on an idle save. Teeth verified on the first.
 
-- [ ] **Two accounts have the `Member` role with a null `MembershipStatus`** —
-  `fshromen@yahoo.com`, `tim@yahoo.com`. Predates the mirrored-role design; self-heals on save.
+- [x] ~~**Two accounts have the `Member` role with a null `MembershipStatus`.**~~ Fixed as code
+  rather than as data. `MembershipStatusRoles.SyncAsync` only ever ran from a write, so a row
+  never re-saved stayed inconsistent forever — "self-heals on save" was true and useless,
+  because nothing was going to save them. `AdminSeeder`'s existing per-user backfill loop now
+  reconciles the status role against the profile, with the same counter-and-log shape the
+  `EmailConfirmed` backfill uses, so it heals on startup and cannot drift again.
+  `StatusRolesAreStaleAsync` is `internal` so the check is testable without a running seeder,
+  and so the log line counts real repairs rather than every account.
+  **Caveat:** `AdminSeeder` runs in Development only. This repairs the developer database and
+  any future one, not a production database.
 
 - [x] ~~**CSV built with `+=` in a loop.**~~ Fixed - `StringBuilder`, matching
   `Services/FileDropEmailSender.cs:47`. Done in the same pass as the two items above because

@@ -9,6 +9,9 @@ namespace StewardshipSurvey.Controllers.Api
 {
     [ApiController]
     [Route("api/[controller]")]
+    // Default deny, like every other API controller. Login and Refresh opt back out below -
+    // they have to be reachable without a token, that being the point of them.
+    [Authorize]
     public class AuthController : ControllerBase
     {
         private readonly SignInManager<ApplicationUser> _signInManager;

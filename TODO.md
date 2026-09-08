@@ -6,9 +6,9 @@ can go straight to the code without re-deriving anything.
 Ticked items are kept rather than deleted: what was wrong and why it was wrong is the
 useful part, and several of these were found while fixing something else.
 
-State: `main`, 138 tests, 0 warnings, CI green. **Every item this file was opened with is
-closed.** What remains is three items in section 3 found while fixing the others, and section
-5, which is a script for you to run against your own machine rather than work I can finish.
+State: `main`, 138 tests, 0 warnings, CI green. **Sections 1, 2, 4 and 5 are clear, and every
+item this file was opened with is closed.** What remains is three items in section 3, all
+found while fixing the others rather than present at the start.
 
 ---
 
@@ -358,12 +358,17 @@ ends in `ROLLBACK`, so the first run shows what would go and changes nothing.
 - [x] ~~**`staff@stmark.local` is polluted**~~ Cleared. Profile 7 read "Test Staffer" with
   PrefersEmail set; name fields are now empty and all three contact preferences off. The
   account itself is untouched and still signs in.
-- [ ] **Rotate `Jwt:Key`** in local user secrets. Command in `scripts/README.md`.
-  **This is no longer cosmetic.** When this item was written the key only signed tokens and
-  nothing validated them, so rotating it had no observable effect. The key is now what the
-  bearer handler validates against, so rotating it immediately invalidates every outstanding
-  access *and* refresh token and forces a fresh sign-in. That is the point of a rotation, but
-  it is a behaviour change since the item was filed.
+- [x] ~~**Rotate `Jwt:Key`**~~ Rotated. 48 random bytes, base64, 64 characters — comfortably
+  past the 32-byte HMAC-SHA256 minimum the application enforces. Generated inline and written
+  straight to user secrets, so the value never appeared in a command line, a log or a
+  transcript; the change was confirmed by comparing SHA-256 fingerprints rather than by
+  printing it.
+  Verified the application starts on the new key and that `/api` answers an anonymous call
+  with 401 JSON rather than a redirect.
+  **Not verified:** a successful sign-in minting a token with this key, which needs credentials
+  for a real account. If the key were unusable the failure would be loud and immediate — a 500
+  naming `Jwt:Key` on the first login — not silent.
+  Every token issued before now is dead, which is the point of a rotation.
 
 ## Known limits — documented, not defects
 

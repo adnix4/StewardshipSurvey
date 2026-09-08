@@ -1,18 +1,80 @@
+﻿using System.Net;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using StewardshipSurvey.Maui.Models;
+using System.Diagnostics;
 
 namespace StewardshipSurvey.Maui.Services;
 
 public class MemberApiService
 {
     private readonly HttpClient _httpClient;
+    private readonly AuthenticationService _auth;
     private readonly JsonSerializerOptions _jsonOptions;
 
-    public MemberApiService(HttpClient httpClient)
+    public MemberApiService(HttpClient httpClient, AuthenticationService auth)
     {
         _httpClient = httpClient;
+        _auth = auth;
         _jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+    }
+
+    /// <summary>
+    /// Sends an authenticated request, renewing the token once if the server rejects it.
+    /// <para>
+    /// Every method here reports a failure by returning an empty result, so a 401 was
+    /// indistinguishable from a member who had simply answered nothing. With the access token
+    /// now lasting an hour rather than a week, that would have become the normal experience
+    /// after sixty minutes: a survey that quietly forgot every answer.
+    /// </para>
+    /// <para>
+    /// One retry only. If the refresh fails the session is genuinely over - the account was
+    /// deactivated, its roles changed, or the signing key was rotated - and
+    /// <see cref="AuthenticationService.SessionEnded"/> has already fired.
+    /// </para>
+    /// </summary>
+    private async Task<HttpResponseMessage> SendAuthenticatedAsync(
+        HttpRequestMessage request, string authToken)
+    {
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authToken);
+
+        var response = await _httpClient.SendAsync(request);
+
+        if (response.StatusCode != HttpStatusCode.Unauthorized)
+        {
+            return response;
+        }
+
+        if (!await _auth.RefreshAsync())
+        {
+            return response;
+        }
+
+        // A request cannot be sent twice, so the retry goes on a copy carrying the new token.
+        var retry = await CloneAsync(request);
+        retry.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _auth.GetToken());
+
+        return await _httpClient.SendAsync(retry);
+    }
+
+    private static async Task<HttpRequestMessage> CloneAsync(HttpRequestMessage request)
+    {
+        var clone = new HttpRequestMessage(request.Method, request.RequestUri);
+
+        if (request.Content != null)
+        {
+            var body = await request.Content.ReadAsStringAsync();
+            var mediaType = request.Content.Headers.ContentType?.MediaType ?? "application/json";
+            clone.Content = new StringContent(body, Encoding.UTF8, mediaType);
+        }
+
+        foreach (var header in request.Headers)
+        {
+            clone.Headers.TryAddWithoutValidation(header.Key, header.Value);
+        }
+
+        return clone;
     }
 
     public async Task<List<InterestAreaDto>> GetAllInterestsAsync()
@@ -39,9 +101,8 @@ public class MemberApiService
         try
         {
             var request = new HttpRequestMessage(HttpMethod.Get, "/api/interests/current");
-            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authToken);
 
-            var response = await _httpClient.SendAsync(request);
+            var response = await SendAuthenticatedAsync(request, authToken);
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
@@ -67,9 +128,8 @@ public class MemberApiService
             {
                 Content = content
             };
-            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authToken);
 
-            var response = await _httpClient.SendAsync(request);
+            var response = await SendAuthenticatedAsync(request, authToken);
             return response.IsSuccessStatusCode;
         }
         catch (Exception ex)
@@ -103,9 +163,8 @@ public class MemberApiService
         try
         {
             var request = new HttpRequestMessage(HttpMethod.Get, "/api/involvements/current");
-            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authToken);
 
-            var response = await _httpClient.SendAsync(request);
+            var response = await SendAuthenticatedAsync(request, authToken);
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
@@ -131,9 +190,8 @@ public class MemberApiService
             {
                 Content = content
             };
-            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authToken);
 
-            var response = await _httpClient.SendAsync(request);
+            var response = await SendAuthenticatedAsync(request, authToken);
             return response.IsSuccessStatusCode;
         }
         catch (Exception ex)
@@ -167,9 +225,8 @@ public class MemberApiService
         try
         {
             var request = new HttpRequestMessage(HttpMethod.Get, "/api/serviceroles/current");
-            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authToken);
 
-            var response = await _httpClient.SendAsync(request);
+            var response = await SendAuthenticatedAsync(request, authToken);
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
@@ -195,9 +252,8 @@ public class MemberApiService
             {
                 Content = content
             };
-            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authToken);
 
-            var response = await _httpClient.SendAsync(request);
+            var response = await SendAuthenticatedAsync(request, authToken);
             return response.IsSuccessStatusCode;
         }
         catch (Exception ex)
@@ -212,9 +268,8 @@ public class MemberApiService
         try
         {
             var request = new HttpRequestMessage(HttpMethod.Get, "/api/members/current");
-            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authToken);
 
-            var response = await _httpClient.SendAsync(request);
+            var response = await SendAuthenticatedAsync(request, authToken);
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
@@ -240,9 +295,8 @@ public class MemberApiService
             {
                 Content = content
             };
-            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authToken);
 
-            var response = await _httpClient.SendAsync(request);
+            var response = await SendAuthenticatedAsync(request, authToken);
             return response.IsSuccessStatusCode;
         }
         catch (Exception ex)

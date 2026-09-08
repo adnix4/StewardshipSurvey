@@ -1,3 +1,9 @@
+﻿using Microsoft.Extensions.Logging;
+using Polly;
+using Polly.Extensions.Http;
+using StewardshipSurvey.Maui.Services;
+using StewardshipSurvey.Maui.ViewModels;
+
 namespace StewardshipSurvey.Maui;
 
 public static class MauiProgram

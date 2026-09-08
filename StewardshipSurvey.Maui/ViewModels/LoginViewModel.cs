@@ -1,6 +1,7 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using StewardshipSurvey.Maui.Services;
+using System.Diagnostics;
 
 namespace StewardshipSurvey.Maui.ViewModels;
 

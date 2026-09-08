@@ -6,9 +6,9 @@ can go straight to the code without re-deriving anything.
 Ticked items are kept rather than deleted: what was wrong and why it was wrong is the
 useful part, and several of these were found while fixing something else.
 
-State: `main`, 138 tests, 0 warnings, CI green. **Sections 1, 2, 4 and 5 are clear, and every
-item this file was opened with is closed.** What remains is three items in section 3, all
-found while fixing the others rather than present at the start.
+State: `main`, 172 tests, 0 warnings, CI green. **Every item this file was opened with is
+closed, and so is everything found since — except one.** The MAUI app turns out never to have
+been built or finished; that is now its own item, with the analysis done.
 
 ---
 
@@ -208,12 +208,37 @@ found while fixing the others rather than present at the start.
   POST. The structural test now also requires every API controller to name the bearer scheme,
   because forgetting it on a new controller would be silent.
 
-- [ ] **The MAUI client has not caught up with the server.**
-  `StewardshipSurvey.Maui/Services/AuthenticationService.cs` never calls `/api/auth/logout`
-  and has no refresh call; `MemberApiService.cs` turns a 401 into empty data rather than
-  sending the member back to sign in. With the access token now lasting an hour instead of a
-  week, a session will silently stop returning data after an hour. Recorded in the MAUI README
-  too. The project is not in the solution and CI never builds it, so nothing catches this.
+- [x] ~~**The MAUI client has not caught up with the server.**~~ Fixed, and compiler-verified.
+  `AuthenticationService` gained `RefreshAsync`, which exchanges the token and — when the
+  server refuses, meaning the session was ended deliberately — clears it and raises
+  `SessionEnded`. `LogoutAsync` now calls `POST /api/auth/logout` before clearing locally, so
+  a copied token dies with the session instead of outliving it. `MemberApiService` routes all
+  eight authenticated calls through a helper that renews once on a 401 and retries on a clone
+  of the request; every method here reports failure as an empty result, so a 401 had been
+  indistinguishable from a member who had answered nothing.
+  Also fixed while there: `LogoutAsync` did `await _secureStorage.Remove(...)`, awaiting a
+  `bool`. `ISecureStorage.Remove` is synchronous, so that never compiled.
+
+- [ ] **The MAUI app has never been built, and is not finished.**
+  Found while doing the item above, after installing the MAUI workload to get a real compiler.
+  It is not "a project with a few errors" — it was never a working app. Fixed so far, all
+  pre-existing:
+  `<Project Sdk="Microsoft.Maui.Sdk">` — that is an inner SDK the .NET SDK imports when
+  `UseMaui` is true, not a valid root SDK, so the project could not even be evaluated;
+  `$([OperatingSystem]::IsWindows())` in two conditions, which is not a permitted MSBuild
+  property function (`$([MSBuild]::IsOSPlatform('windows'))` is);
+  explicit `Microsoft.Maui.Controls` / `.Hosting` package references, which the workload
+  supplies from `library-packs` and which this repo's package source mapping cannot resolve;
+  eight missing `using` directives across the view models, pages and services
+  (`System.Collections.ObjectModel`, `System.Diagnostics`, the view-model namespace).
+  **Still missing, and the reason it does not build:**
+  `Pages/SelectInvolvementsPage` and `Pages/SelectServiceRolesPage` are registered in
+  `MauiProgram` but were never written — no XAML, no code-behind. And there is no `Platforms/`
+  or `Resources/` folder at all, so there is no entry point on any target framework (`CS5001`)
+  and no app icon, splash or manifest.
+  Finishing this means authoring two screens and the whole platform layer, which is building
+  the app rather than repairing it — and none of it can be run here, since there is no emulator
+  or device. Worth deciding on deliberately rather than drifting into.
 
 - [x] ~~**Report logic exists in triplicate.**~~ Fixed. `Data/MemberReportQuery.cs` now holds
   the include/filter chain, the sort and `ParseIntList`, and all three call sites use it.

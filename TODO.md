@@ -6,8 +6,9 @@ can go straight to the code without re-deriving anything.
 Ticked items are kept rather than deleted: what was wrong and why it was wrong is the
 useful part, and several of these were found while fixing something else.
 
-State: `main`, 138 tests, 0 warnings, CI green. **Sections 1, 2 and 4 are clear. Section 3
-has three items left, all newly found rather than original.**
+State: `main`, 138 tests, 0 warnings, CI green. **Every item this file was opened with is
+closed.** What remains is three items in section 3 found while fixing the others, and section
+5, which is a script for you to run against your own machine rather than work I can finish.
 
 ---
 
@@ -346,15 +347,26 @@ has three items left, all newly found rather than original.**
 
 ## 5. Development database cleanup
 
-- [ ] **Five leftover test accounts** from verification runs: `devlink-…`, `diag-…`, `rctest-…`,
-  `smtpfail-…`, `verify-…` (all `@stmark.local`).
-- [ ] **`staff@stmark.local` is polluted** — its profile reads "Test Staffer" with contact
-  preference Email. It had no name before.
-- [ ] **Rotate `Jwt:Key`** in local user secrets. Development-only: it signs tokens for a
-  LocalDB instance on one machine, is not in the repository, and nothing validates those
-  tokens yet (see the MAUI item in section 2). Worth doing before anything is deployed.
+Delivered as `scripts/dev-cleanup.sql` and `scripts/README.md` rather than run for you: these
+are deletes against your development database, and the connection string is the only thing
+standing between the script and the wrong one. It is written to be run twice - as committed it
+ends in `ROLLBACK`, so the first run shows what would go and changes nothing.
 
----
+- [ ] **Five leftover test accounts** from verification runs: `devlink-`, `diag-`, `rctest-`,
+  `smtpfail-`, `verify-` (all `@stmark.local`). Script section 1. The delete order is not
+  arbitrary: `AspNetUsers.MemberID` is a `NO ACTION` foreign key, so the user row goes before
+  the profile it points at, and deleting the profile then cascades to that member's three sets
+  of answers. Same order, same reason, as `DeactivatedUserPurgeService`.
+- [ ] **`staff@stmark.local` is polluted** — its profile reads "Test Staffer" with contact
+  preference Email. Script section 2, guarded so it only fires while the row still looks like
+  the test data. The name fields go back to `NULL` rather than `''`: the account genuinely had
+  no name before, and that is absence rather than emptiness.
+- [ ] **Rotate `Jwt:Key`** in local user secrets. Command in `scripts/README.md`.
+  **This is no longer cosmetic.** When this item was written the key only signed tokens and
+  nothing validated them, so rotating it had no observable effect. The key is now what the
+  bearer handler validates against, so rotating it immediately invalidates every outstanding
+  access *and* refresh token and forces a fresh sign-in. That is the point of a rotation, but
+  it is a behaviour change since the item was filed.
 
 ## Known limits — documented, not defects
 

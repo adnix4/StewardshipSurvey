@@ -128,7 +128,10 @@ namespace StewardshipSurvey.Tests.Integration
         {
             var response = await _factory.CreateNonRedirectingClient().GetAsync("/api/members/1");
 
-            Assert.NotEqual(HttpStatusCode.OK, response.StatusCode);
+            // Was "not 200", which a 302 to the login form also satisfies - and a 302 was
+            // exactly what this returned. The API now answers a JSON client in a way it can
+            // read; see BearerAuthTests for the rest of that behaviour.
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }
 
         /// <summary>

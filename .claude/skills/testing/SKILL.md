@@ -66,6 +66,12 @@ The factory gives you:
 - `MailDropPath` — the temp directory this factory's `FileDropEmailSender` writes to, one per
   factory instance so parallel test classes cannot read each other's messages. Deleted on
   dispose.
+- `CreateBearerClientAsync(email, password)` — signs in through `POST /api/auth/login` and
+  returns a client carrying the bearer token, holding no cookie. The MAUI app's path.
+- `IssueTokenAsync(email, password)` — the raw token, for a test that needs to hold one and
+  use it after something has changed underneath it.
+- `CreateClientWithToken(token)` — attaches a token you already have, to prove one that worked
+  a moment ago has stopped being accepted.
 
 **Generate unique emails per test.** The fixture is shared across a class, so the database is
 shared too. A hardcoded address collides the moment a second test uses it.
@@ -90,10 +96,22 @@ Each of these cost real time to find. They are handled inside the factory — do
 - **A 302 does not mean success.** A refused sign-in redirects to
   `/Identity/Account/Lockout`; a successful one redirects to the return URL. Assert on
   `Location`, not just the status.
-- **API endpoints authenticate by cookie, not bearer token.** `AuthController` issues JWTs,
-  but `Program.cs` never registers a JWT bearer scheme, so `[Authorize]` resolves to the
-  Identity cookie. An `Authorization: Bearer` header is ignored. (This is a real bug in the
-  app, not a testing quirk.)
+- **API endpoints accept a cookie *or* a bearer token**, and which one is used is decided per
+  request by the policy scheme in `Program.cs`: an `Authorization: Bearer` header routes to the
+  JWT handler, anything else to the Identity cookie. So `CreateSignedInClientAsync` still works
+  against `/api`, and `CreateBearerClientAsync` is what you want when the token path itself is
+  under test.
+- **A bearer token carries a snapshot, not a live view.** Roles are baked in at issue time. The
+  only thing that invalidates an outstanding token is a security-stamp bump — which
+  deactivation, a role change and logout all now do. If a test changes a user and then expects
+  the *old* token to behave differently, it needs `UpdateSecurityStampAsync`, not just the
+  change itself.
+- **Do not read `Jwt:*` (or any config the factory injects) eagerly in `Program.cs`.** The test
+  host adds its configuration through `ConfigureAppConfiguration`, which is applied *after* the
+  top-level statements run. Reading a value into a local at startup gets the pre-test value —
+  which is how the bearer scheme first configured itself with no signing key and rejected every
+  token it had just issued. Configure options through the options system
+  (`AddOptions<T>().Configure<IOptions<...>>(...)`) so the read happens on first use.
 - **`Models/DbContext.cs` is an empty stub class** that shadows
   `Microsoft.EntityFrameworkCore.DbContext`. A test file with `using StewardshipSurvey.Models;`
   but no `using Microsoft.EntityFrameworkCore;` gets a baffling compile error.

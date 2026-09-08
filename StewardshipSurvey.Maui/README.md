@@ -158,12 +158,26 @@ The application communicates with the following API endpoints:
 
 2. **Authenticated Requests**
    - Token included in `Authorization: Bearer {token}` header
-   - API validates token and processes request
-   - Token remains valid for 7 days
+   - API validates the token and processes the request
+   - Token is valid for one hour (`Jwt:AccessTokenMinutes`)
 
-3. **Logout**
+3. **Refresh**
+   - `POST /api/auth/refresh` exchanges a token for a fresh one
+   - Works for up to seven days past expiry (`Jwt:RefreshWindowMinutes`)
+   - Refused if the account was deactivated, had its roles changed, logged out, or is locked
+
+4. **Logout**
+   - `POST /api/auth/logout` invalidates every outstanding token for the account
    - Token removed from secure storage
    - User redirected to login page
+
+> **Client work still outstanding.** The server side of the above is implemented and tested
+> (`StewardshipSurvey.Tests/Integration/BearerAuthTests.cs`). The client is not caught up:
+> `Services/AuthenticationService.cs` never calls `/api/auth/logout`, there is no refresh call
+> anywhere, and `Services/MemberApiService.cs` turns a 401 into empty data rather than sending
+> the member back to the login page. Until that is done a session will simply stop returning
+> data an hour after sign-in. This project is not in `StewardshipSurvey.sln` and CI does not
+> build it, so none of that is caught automatically.
 
 ## Data Models
 

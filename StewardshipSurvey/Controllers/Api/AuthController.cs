@@ -1,11 +1,9 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Text;
-using Microsoft.IdentityModel.Tokens;
 using StewardshipSurvey.Data;
+using StewardshipSurvey.Services;
 
 namespace StewardshipSurvey.Controllers.Api
 {
@@ -15,18 +13,18 @@ namespace StewardshipSurvey.Controllers.Api
     {
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly IConfiguration _configuration;
+        private readonly AccessTokenIssuer _tokens;
         private readonly ILogger<AuthController> _logger;
 
         public AuthController(
             SignInManager<ApplicationUser> signInManager,
             UserManager<ApplicationUser> userManager,
-            IConfiguration configuration,
+            AccessTokenIssuer tokens,
             ILogger<AuthController> logger)
         {
             _signInManager = signInManager;
             _userManager = userManager;
-            _configuration = configuration;
+            _tokens = tokens;
             _logger = logger;
         }
 
@@ -50,11 +48,17 @@ namespace StewardshipSurvey.Controllers.Api
                     return Unauthorized(new { message = "Invalid email or password" });
                 }
 
+                // CheckPasswordSignInAsync, not PasswordSignInAsync. The two do identical
+                // lockout bookkeeping and return the same SignInResult; the difference is that
+                // PasswordSignInAsync also issues the Identity cookie, so this endpoint used to
+                // hand back a bearer token *and* start a cookie session. That left the API with
+                // two authentication mechanisms while validating neither.
+                //
                 // lockoutOnFailure must stay true. It was false, which made this endpoint a
                 // lockout bypass for the whole application: an attacker who found it could
                 // guess passwords without limit even once the Razor login started counting.
-                var result = await _signInManager.PasswordSignInAsync(
-                    user, request.Password, isPersistent: false, lockoutOnFailure: true);
+                var result = await _signInManager.CheckPasswordSignInAsync(
+                    user, request.Password, lockoutOnFailure: true);
 
                 if (result.IsLockedOut)
                 {
@@ -86,7 +90,7 @@ namespace StewardshipSurvey.Controllers.Api
                     return Unauthorized(new { message = "Invalid email or password" });
                 }
 
-                var token = GenerateJwtToken(user);
+                var token = await _tokens.IssueAsync(user);
                 _logger.LogInformation("API login succeeded for {Email}.", request.Email);
 
                 return Ok(new
@@ -110,56 +114,88 @@ namespace StewardshipSurvey.Controllers.Api
             }
         }
 
-        private string GenerateJwtToken(ApplicationUser user)
+        /// <summary>
+        /// Exchanges an access token for a fresh one. Anonymous by necessity: the caller's
+        /// token has usually expired by the time they get here, so it cannot authenticate the
+        /// request that renews it.
+        /// </summary>
+        [HttpPost("refresh")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Refresh([FromBody] RefreshRequest request)
         {
-            // The signing key is a secret and has no fallback - a hardcoded default would
-            // let anyone with the source mint valid tokens. Issuer and audience are not secrets.
-            var jwtKey = _configuration["Jwt:Key"];
-            if (string.IsNullOrWhiteSpace(jwtKey))
+            if (string.IsNullOrWhiteSpace(request?.Token))
             {
-                throw new InvalidOperationException(
-                    "Jwt:Key is not configured. From the StewardshipSurvey project folder, run: " +
-                    "dotnet user-secrets set \"Jwt:Key\" \"<random value of at least 32 characters>\". " +
-                    "See README.md.");
+                return BadRequest(new { message = "A token is required" });
             }
 
-            // HmacSha256 requires a key of at least 256 bits; a shorter one fails with an opaque IDX10603.
-            if (Encoding.UTF8.GetByteCount(jwtKey) < 32)
+            try
             {
-                throw new InvalidOperationException(
-                    "Jwt:Key must be at least 32 bytes (256 bits) for HMAC-SHA256 signing.");
+                // Signature, issuer and audience are all still enforced; only the expiry is
+                // relaxed, and only as far as the configured refresh window.
+                var principal = _tokens.ReadForRefresh(request.Token);
+                if (principal == null)
+                {
+                    _logger.LogInformation("Token refresh refused: token unreadable or past the refresh window.");
+                    return Unauthorized(new { message = "Please sign in again." });
+                }
+
+                var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+                var user = userId == null ? null : await _userManager.FindByIdAsync(userId);
+
+                if (user == null)
+                {
+                    return Unauthorized(new { message = "Please sign in again." });
+                }
+
+                // Same stamp check the bearer handler applies, repeated here because this
+                // endpoint deliberately bypasses that handler. Without it, refresh would be a
+                // way for a revoked token to mint an unrevoked one.
+                var stamp = principal.FindFirstValue(StewardshipClaims.SecurityStamp);
+                if (stamp == null || stamp != await _userManager.GetSecurityStampAsync(user))
+                {
+                    _logger.LogInformation("Token refresh refused for {Email}: token superseded.", user.Email);
+                    return Unauthorized(new { message = "Please sign in again." });
+                }
+
+                // A locked-out account must not be able to refresh its way through the lockout.
+                if (await _userManager.IsLockedOutAsync(user))
+                {
+                    _logger.LogWarning("Token refresh blocked for {Email}: account locked out.", user.Email);
+                    return StatusCode(StatusCodes.Status423Locked, new
+                    {
+                        message = "Too many failed attempts. This account is locked temporarily."
+                    });
+                }
+
+                var token = await _tokens.IssueAsync(user);
+                _logger.LogInformation("Token refreshed for {Email}.", user.Email);
+
+                return Ok(new { token = token, email = user.Email, message = "Token refreshed" });
             }
-
-            var jwtIssuer = _configuration["Jwt:Issuer"] ?? "StewardshipSurvey";
-            var jwtAudience = _configuration["Jwt:Audience"] ?? "StewardshipSurveyUsers";
-
-            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
-
-            var claims = new[]
+            catch (InvalidOperationException ex)
             {
-                new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
-                new Claim(ClaimTypes.Name, user.UserName ?? string.Empty),
-                new Claim("MemberID", (user.MemberID ?? 0).ToString())
-            };
-
-            var token = new JwtSecurityToken(
-                issuer: jwtIssuer,
-                audience: jwtAudience,
-                claims: claims,
-                expires: DateTime.UtcNow.AddDays(7),
-                signingCredentials: credentials
-            );
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
+                _logger.LogError(ex, "JWT configuration error during refresh");
+                return StatusCode(500, new { message = ex.Message });
+            }
         }
 
         [HttpPost("logout")]
         [Authorize]
         public async Task<IActionResult> Logout()
         {
+            // Clears the cookie, which matters for a browser caller.
             await _signInManager.SignOutAsync();
+
+            // A bearer token cannot be withdrawn, so the only way to end an API session is to
+            // move the security stamp the token was signed against. That invalidates every
+            // outstanding token for this account on every device, not just the one calling -
+            // a blunt instrument, and the only one a stateless token design offers.
+            var user = await _userManager.GetUserAsync(User);
+            if (user != null)
+            {
+                await _userManager.UpdateSecurityStampAsync(user);
+            }
+
             return Ok(new { message = "Logout successful" });
         }
     }
@@ -168,5 +204,10 @@ namespace StewardshipSurvey.Controllers.Api
     {
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
+    }
+
+    public class RefreshRequest
+    {
+        public string Token { get; set; } = string.Empty;
     }
 }

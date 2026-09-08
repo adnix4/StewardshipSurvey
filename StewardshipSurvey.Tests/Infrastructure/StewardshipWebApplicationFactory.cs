@@ -1,3 +1,5 @@
+using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Identity;
@@ -163,8 +165,10 @@ namespace StewardshipSurvey.Tests.Infrastructure
 
         /// <summary>
         /// Signs in through the real Identity UI so the returned client carries a genuine auth
-        /// cookie. API endpoints authenticate by cookie too - no JWT bearer scheme is
-        /// registered in Program.cs - so this is the only way in.
+        /// cookie. API endpoints accept a cookie as well as a bearer token - the policy scheme
+        /// in Program.cs picks on the presence of an Authorization header - so this works for
+        /// Razor pages and for the API. Use <see cref="CreateBearerClientAsync"/> when the
+        /// bearer path is what is under test.
         /// </summary>
         public async Task<HttpClient> CreateSignedInClientAsync(string email, string password = "TestPw1!x")
         {
@@ -185,6 +189,58 @@ namespace StewardshipSurvey.Tests.Infrastructure
             Assert.True(response.StatusCode == System.Net.HttpStatusCode.Found,
                 $"Sign-in for {email} did not redirect; got {(int)response.StatusCode}. " +
                 "A 200 usually means the credentials or the antiforgery token were rejected.");
+
+            return client;
+        }
+
+        /// <summary>
+        /// Signs in through <c>POST /api/auth/login</c> and returns a client carrying the
+        /// bearer token it issued - the path the MAUI app uses. The client holds no cookie:
+        /// the API login stopped issuing one, and a test that accidentally relied on the
+        /// cookie would prove nothing about bearer authentication.
+        /// </summary>
+        public async Task<HttpClient> CreateBearerClientAsync(string email, string password = "TestPw1!x")
+        {
+            var token = await IssueTokenAsync(email, password);
+            var client = CreateNonRedirectingClient();
+
+            client.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            return client;
+        }
+
+        /// <summary>
+        /// The raw token from <c>POST /api/auth/login</c>, for tests that need to hold one and
+        /// use it later - after a role change or a deactivation, for instance.
+        /// </summary>
+        public async Task<string> IssueTokenAsync(string email, string password = "TestPw1!x")
+        {
+            var response = await CreateNonRedirectingClient().PostAsJsonAsync(
+                "/api/auth/login", new { email, password });
+
+            var body = await response.Content.ReadAsStringAsync();
+
+            Assert.True(response.StatusCode == System.Net.HttpStatusCode.OK,
+                $"API login for {email} returned {(int)response.StatusCode}. Body: {body}");
+
+            var token = JsonDocument.Parse(body).RootElement.GetProperty("token").GetString();
+
+            Assert.False(string.IsNullOrWhiteSpace(token), "API login returned an empty token.");
+
+            return token!;
+        }
+
+        /// <summary>
+        /// Attaches <paramref name="token"/> to a fresh client. Used to prove a token that was
+        /// valid a moment ago has stopped being accepted.
+        /// </summary>
+        public HttpClient CreateClientWithToken(string token)
+        {
+            var client = CreateNonRedirectingClient();
+
+            client.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
             return client;
         }

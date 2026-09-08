@@ -6,8 +6,7 @@ can go straight to the code without re-deriving anything.
 Ticked items are kept rather than deleted: what was wrong and why it was wrong is the
 useful part, and several of these were found while fixing something else.
 
-State: `main`, 106 tests, 0 warnings, CI green. **Sections 1 and 2 are clear except for the
-MAUI bearer-auth item.**
+State: `main`, 117 tests, 0 warnings, CI green. **Sections 1 and 2 are clear.**
 
 ---
 
@@ -79,17 +78,43 @@ MAUI bearer-auth item.**
 
 ## 2. High — does not work
 
-- [ ] **The MAUI app cannot authenticate at all.**
-  `StewardshipSurvey/Program.cs` (no `AddJwtBearer` anywhere) vs
-  `StewardshipSurvey.Maui/Services/MemberApiService.cs:42,70,106,134,170,198`
-  The client sends `Authorization: Bearer` on every call; the server registers no bearer
-  scheme, so `[Authorize]` resolves to the Identity cookie and the header is ignored. All 15
-  API endpoints across 6 controllers are unreachable from mobile.
-  Also `AuthController.cs:108-114` emits no role claims, so even with a bearer scheme
-  `[Authorize(Roles = "Staff,Admin")]` on `ReportsController.cs:12` could never pass. Tokens
-  last 7 days with no refresh or revocation. `AuthController.cs:51` additionally issues a
-  cookie as a side effect, so the endpoint has two auth mechanisms and validates the wrong one.
-  `StewardshipSurvey.Maui/README.md:26` advertises this as working.
+- [x] ~~**The MAUI app cannot authenticate at all.**~~ Fixed, server side.
+  A policy scheme (`Program.cs`) now picks per request: an `Authorization: Bearer` header goes
+  to the JWT handler, anything else to the Identity cookie. Selecting on the header rather
+  than on an `/api` path prefix keeps the change purely additive — the seven `MembersApiTests`
+  that authenticate the API by cookie still pass untouched — and means no `[Authorize]`
+  attribute has to name a scheme, so a controller added later cannot forget to.
+  Tokens now carry role claims, so `[Authorize(Roles = "Staff,Admin")]` on `ReportsController`
+  is reachable at all for the first time; it was not merely protected before, it was
+  unreachable. Expiry drops from 7 days to 1 hour, with `POST /api/auth/refresh` gated on the
+  security stamp, so the overall sign-in window is unchanged while the credential on the wire
+  is good for an hour.
+  Revocation works through the Identity security stamp: the stamp is a claim in the token and
+  `OnTokenValidated` compares it to the stored one, so deactivation, a role change or logout
+  all kill outstanding tokens. Chosen over a refresh-token table because that needs a
+  migration and **no test in this repo exercises a migration** (`EnsureCreated`), so CI could
+  not validate it.
+  `AuthController` login moved from `PasswordSignInAsync` to `CheckPasswordSignInAsync` — the
+  same lockout bookkeeping without the cookie the API had been issuing as a side effect. All
+  7 `LockoutTests` stay green, verified both ways.
+  An unauthenticated `/api` call now answers 401 JSON instead of 302 to an HTML login form.
+  The existing coverage for that asserted only "not 200", which a redirect satisfies; it is
+  now an equality assertion.
+  Covered by `StewardshipSurvey.Tests/Integration/BearerAuthTests.cs` — 11 tests. Teeth
+  verified one break at a time: stripping role claims reds only the roles test; neutralising
+  the stamp check reds revocation and logout; restoring `PasswordSignInAsync` reds the
+  no-cookie test; removing the `/api` 401 handling reds both anonymous tests; removing the
+  refresh stamp check reds only the refresh test.
+  **Trade-off, stated rather than buried:** the stamp check costs one primary-key lookup per
+  authenticated API request. Accepted — the alternative is a token that outlives the account.
+  **Honest limits:** nothing exercises the MAUI client end to end, and "log out everywhere" is
+  the only revocation granularity a stateless token design offers — there is no way to revoke
+  one device.
+  Note: a first attempt read `Jwt:Key` into a local at startup to decide whether to register
+  the scheme. That looked equivalent and was not — the test host adds its configuration after
+  the top-level statements run, so the handler configured itself with no key and rejected
+  every token it had just issued. Now configured through the options system, which also
+  removed the need for the registration gate entirely. Recorded in the testing skill.
 
 - [x] ~~**Survey pages turn failures into success and can wipe saved answers.**~~ Fixed across
   all three steps — `SelectInterests`, `SelectMemberInvolvement`, `SelectMemberServiceRoles`.
@@ -142,8 +167,26 @@ MAUI bearer-auth item.**
   `Pages/Admin/EditUser.cshtml.cs:128,130` (also 220, 227) discard the `IdentityResult` and
   redirect as success. `DeactivatedUserPurgeService` does check — the codebase is inconsistent.
 
-- [ ] **No API test coverage at all.** 15 endpoints, 6 controllers, 0 tests. Partly blocked by
-  the bearer-auth item above.
+- [ ] **API test coverage is still thin.** No longer blocked — the bearer-auth item above is
+  done and `MembersApiTests` (7) plus `BearerAuthTests` (11) now cover authentication and the
+  members endpoints. The other 12 endpoints across `Interests`, `Involvements`, `ServiceRoles`
+  and `Reports` still have no behavioural coverage of their own.
+
+- [ ] **The API accepts a cookie on state-changing endpoints with no antiforgery token.**
+  `PUT /api/members/current` and the three `POST .../current` endpoints authenticate by cookie
+  as well as by bearer, and `[ApiController]` applies no antiforgery check — so a browser that
+  is signed in attaches the cookie automatically. Largely blunted today by the closed CORS
+  policy, which stops a cross-site JSON request being sent at all, and it predates the
+  bearer-auth work rather than being introduced by it. The clean fix is to make the API
+  bearer-only, which would mean rewriting the seven cookie-authenticated `MembersApiTests`;
+  worth doing deliberately rather than as a side effect. Found while designing the bearer fix.
+
+- [ ] **The MAUI client has not caught up with the server.**
+  `StewardshipSurvey.Maui/Services/AuthenticationService.cs` never calls `/api/auth/logout`
+  and has no refresh call; `MemberApiService.cs` turns a 401 into empty data rather than
+  sending the member back to sign in. With the access token now lasting an hour instead of a
+  week, a session will silently stop returning data after an hour. Recorded in the MAUI README
+  too. The project is not in the solution and CI never builds it, so nothing catches this.
 
 - [ ] **Report logic exists in triplicate.** (Unrelated to the profile-form duplication,
   which the overposting fix removed.) `Controllers/Api/ReportsController.cs:35-82`,

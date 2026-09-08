@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -250,7 +250,7 @@ namespace StewardshipSurvey.Tests.Integration
             form["MemberDetails.MemberID"] = "9999";
             form["MemberDetails.IsActive"] = "false";
             form["MemberDetails.CreatedDate"] = "1990-01-01";
-            form["MemberDetails.ApplicationUserID"] = "injected-owner";
+            form["MemberDetails.UpdatedDate"] = "1990-01-01";
 
             var response = await PostProfileAsync(client, form);
             Assert.Equal(HttpStatusCode.Found, response.StatusCode);
@@ -259,7 +259,11 @@ namespace StewardshipSurvey.Tests.Integration
             Assert.True(after.IsActive, "IsActive was overwritten from the request.");
             Assert.Equal(before.CreatedDate, after.CreatedDate);
             Assert.Equal(before.MemberID, after.MemberID);
-            Assert.Equal(before.ApplicationUserID, after.ApplicationUserID);
+
+            // UpdatedDate is stamped by the page, so a posted value must not survive - it is
+            // the field ApplicationUserID used to stand in for here, that column having been
+            // removed as a foreign key that never was one.
+            Assert.NotEqual(new DateTime(1990, 1, 1), after.UpdatedDate);
 
             // The form's own fields still had to save, or this would pass on a page that
             // simply ignored the whole POST.

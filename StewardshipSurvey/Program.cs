@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -228,35 +228,11 @@ if (allowedOrigins.Length > 0)
 // Add IHttpContextAccessor to access current request context
 builder.Services.AddHttpContextAccessor();
 
-// Add HttpClientFactory with proper configuration for authenticated requests
-builder.Services.AddHttpClient("ApiClient")
-    .ConfigureHttpClient((provider, client) =>
-    {
-        var httpContextAccessor = provider.GetRequiredService<IHttpContextAccessor>();
-        var request = httpContextAccessor?.HttpContext?.Request;
-        
-        if (request != null)
-        {
-            var baseUrl = $"{request.Scheme}://{request.Host}";
-            client.BaseAddress = new Uri(baseUrl);
-        }
-    });
-
-// Register HttpClient for dependency injection (fallback for direct injection)
-builder.Services.AddScoped<HttpClient>(provider =>
-{
-    var httpClient = new HttpClient();
-    var httpContextAccessor = provider.GetRequiredService<IHttpContextAccessor>();
-    var request = httpContextAccessor?.HttpContext?.Request;
-    
-    if (request != null)
-    {
-        var baseUrl = $"{request.Scheme}://{request.Host}";
-        httpClient.BaseAddress = new Uri(baseUrl);
-    }
-    
-    return httpClient;
-});
+// Note: two HttpClient registrations used to sit here - a named "ApiClient" from
+// AddHttpClient and a raw `new HttpClient()` registered as scoped below it. Neither had a
+// single consumer: nothing in this application injects HttpClient or IHttpClientFactory, and
+// the MAUI client has its own. The raw one was the listed defect; the named one it pointed to
+// as the correct alternative was equally unused, so both are gone rather than one.
 
 var app = builder.Build();
 

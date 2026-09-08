@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using StewardshipSurvey.Tests.Infrastructure;
 
 namespace StewardshipSurvey.Tests.Integration
@@ -12,6 +12,22 @@ namespace StewardshipSurvey.Tests.Integration
         private readonly StewardshipWebApplicationFactory _factory;
 
         public AnonymousAccessTests(StewardshipWebApplicationFactory factory) => _factory = factory;
+
+        [Fact]
+        public async Task The_home_page_does_not_leak_its_commented_placeholder()
+        {
+            // Pages/Index.cshtml carries a commented-out "How / When / Why" block kept as a
+            // placeholder, plus an explanatory comment above it. Razor comments do not nest,
+            // so an explanation that itself mentions @* is exactly the way to break one.
+            var html = await _factory.CreateNonRedirectingClient().GetStringAsync("/");
+
+            Assert.DoesNotContain("PLACEHOLDER", html);
+            Assert.DoesNotContain("gettingStartedTitle", html);
+            Assert.DoesNotContain("Why should I help my church family?", html);
+
+            // Not introBlock: the home page has a live element by that id above the comment.
+            Assert.Contains("id=\"introBlock\"", html);
+        }
 
         [Fact]
         public async Task Home_page_is_public()

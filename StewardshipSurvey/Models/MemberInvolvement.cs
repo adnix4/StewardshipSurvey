@@ -5,9 +5,6 @@ namespace StewardshipSurvey.Models
 {
     public class MemberInvolvement
     {
-        [Key]
-        public int MemberInvolvementID { get; set; }
-
         [ForeignKey("Member")]
         public int MemberID { get; set; }
         public MemberInfo? Member { get; set; }

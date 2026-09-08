@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using StewardshipSurvey.Data;
@@ -16,8 +16,6 @@ namespace StewardshipSurvey.Services
     /// </summary>
     public class DeactivatedUserPurgeService : BackgroundService
     {
-        private static readonly TimeSpan StartupDelay = TimeSpan.FromMinutes(1);
-
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly UserRetentionOptions _options;
         private readonly ILogger<DeactivatedUserPurgeService> _logger;
@@ -47,7 +45,7 @@ namespace StewardshipSurvey.Services
 
             try
             {
-                await Task.Delay(StartupDelay, stoppingToken);
+                await Task.Delay(TimeSpan.FromMinutes(_options.StartupDelayMinutes), stoppingToken);
 
                 while (!stoppingToken.IsCancellationRequested)
                 {

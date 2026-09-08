@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using StewardshipSurvey.Data;
 using StewardshipSurvey.Models;
+using StewardshipSurvey.Services;
 
 namespace StewardshipSurvey.Tests.Infrastructure
 {
@@ -50,10 +51,10 @@ namespace StewardshipSurvey.Tests.Infrastructure
                     ["Email:FileDropPath"] = MailDropPath,
                     ["Email:Smtp:Host"] = null,
 
-                    // AuthController refuses to mint a token without this and returns 500,
-                    // so a successful API sign-in cannot be exercised unless it is set.
-                    // A fixed literal is fine here: nothing validates these tokens yet, and
-                    // the database is thrown away when the run ends.
+                    // Signs and now also validates the API's bearer tokens - the bearer handler
+                    // has no signing key without it and rejects everything. A fixed literal is
+                    // fine: it never leaves this process and the database is thrown away when
+                    // the run ends.
                     ["Jwt:Key"] = "test-only-signing-key-not-used-anywhere-else-32+"
                 }));
 
@@ -69,7 +70,18 @@ namespace StewardshipSurvey.Tests.Infrastructure
 
                 // The purge sweep starts with the host. Left in place it could delete rows out
                 // from under a slow test.
-                services.RemoveAll<IHostedService>();
+                //
+                // Removed by implementation type, not with RemoveAll<IHostedService>(). The
+                // blanket version happened to remove exactly this one today, but it would
+                // silently stop any hosted service added later from running under every
+                // integration test - and a background job that never runs in tests fails
+                // quietly, which is the worst way to find out.
+                var purge = services.SingleOrDefault(d =>
+                    d.ServiceType == typeof(IHostedService)
+                    && d.ImplementationType == typeof(DeactivatedUserPurgeService));
+
+                Assert.NotNull(purge); // the registration moved or was renamed
+                services.Remove(purge!);
 
                 using var scope = services.BuildServiceProvider().CreateScope();
                 var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();

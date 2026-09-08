@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace StewardshipSurvey.Models.DTOs
 {
@@ -6,10 +6,10 @@ namespace StewardshipSurvey.Models.DTOs
     /// The fields a member may set on their own profile form, and nothing else.
     /// <para>
     /// The page used to bind <see cref="MemberInfo"/> - the EF entity - directly. A crafted
-    /// POST could therefore carry <c>MemberID</c>, <c>IsActive</c>, <c>CreatedDate</c>,
-    /// <c>ApplicationUserID</c> and the three navigation collections alongside the form's real
-    /// fields. The update path happened to copy a fixed list of properties, which blunted it,
-    /// but the insert path added the bound object to the context exactly as it arrived.
+    /// POST could therefore carry <c>MemberID</c>, <c>IsActive</c>, <c>CreatedDate</c> and the
+    /// three navigation collections alongside the form's real fields. The update path happened
+    /// to copy a fixed list of properties, which blunted it, but the insert path added the
+    /// bound object to the context exactly as it arrived.
     /// </para>
     /// <para>
     /// With a dedicated input type the extra values have nowhere to land: the binder discards

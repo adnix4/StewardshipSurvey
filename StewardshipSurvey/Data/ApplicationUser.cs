@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.General;
 using System.ComponentModel.DataAnnotations.Schema;
 using StewardshipSurvey.Models;
 

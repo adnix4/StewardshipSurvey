@@ -14,7 +14,6 @@ namespace StewardshipSurvey.Data
         public DbSet<MemberInfo> MemberInfos { get; set; }
         public DbSet<InterestAreas> InterestAreas { get; set; }
         public DbSet<InvolvementAreas> InvolvementAreas { get; set; }
-        //public DbSet<ServiceRoles> ServiceRoles { get; set; }
         public DbSet<MemberInterest> MemberInterests { get; set; }
         public DbSet<MemberInvolvement> MemberInvolvements { get; set; }
         public DbSet<MemberServiceRole> MemberServiceRoles { get; set; }

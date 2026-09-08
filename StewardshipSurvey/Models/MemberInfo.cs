@@ -55,7 +55,6 @@ namespace StewardshipSurvey.Models
 
         public DateTime? UpdatedDate { get; set; }
 
-        public string ApplicationUserID { get; set; } = string.Empty;
 
         // Null until the person answers. Mirrored onto the Member / ProspectiveMember
         // Identity roles when the profile is saved, so views and nav can check it cheaply.

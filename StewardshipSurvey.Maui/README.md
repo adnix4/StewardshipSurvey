@@ -4,13 +4,13 @@ A .NET MAUI mobile/desktop application for the St. Mark Stewardship Survey, prov
 
 ## Features
 
-? **Cross-Platform Support**
+- **Cross-Platform Support**
 - Windows (Desktop)
 - Android
 - iOS
 - macOS
 
-? **Member Features**
+- **Member Features**
 - Login with email/password
 - Member profile information
 - Contact preference selection
@@ -19,7 +19,7 @@ A .NET MAUI mobile/desktop application for the St. Mark Stewardship Survey, prov
 - Service role selection
 - Secure token storage
 
-? **Technical Features**
+- **Technical Features**
 - MVVM architecture with MVVM Community Toolkit
 - Async/await patterns
 - Dependency injection
@@ -32,30 +32,30 @@ A .NET MAUI mobile/desktop application for the St. Mark Stewardship Survey, prov
 
 ```
 StewardshipSurvey.Maui/
-??? MauiProgram.cs                          # Application entry point & DI
-??? App.xaml, App.xaml.cs                   # Application resources
-??? AppShell.xaml, AppShell.xaml.cs         # Navigation shell
-?
-??? Pages/
-?   ??? LoginPage.xaml(.cs)                 # Login screen
-?   ??? MemberInfoPage.xaml(.cs)            # Profile information
-?   ??? SelectInterestsPage.xaml(.cs)       # Interest selection
-?   ??? SelectInvolvementsPage.xaml(.cs)    # Involvement selection
-?   ??? SelectServiceRolesPage.xaml(.cs)    # Service role selection
-?
-??? ViewModels/
-?   ??? LoginViewModel.cs                   # Login logic
-?   ??? MemberInfoViewModel.cs              # Profile logic
-?   ??? SelectionViewModels.cs              # Interests/Involvements/ServiceRoles logic
-?
-??? Services/
-?   ??? MemberApiService.cs                 # API communication
-?   ??? AuthenticationService.cs            # Authentication & token management
-?
-??? Models/
-?   ??? Dtos.cs                             # Data transfer objects
-?
-??? StewardshipSurvey.Maui.csproj               # Project configuration
++-- MauiProgram.cs                          # Application entry point & DI
++-- App.xaml, App.xaml.cs                   # Application resources
++-- AppShell.xaml, AppShell.xaml.cs         # Navigation shell
+|
++-- Pages/
+|   +-- LoginPage.xaml(.cs)                 # Login screen
+|   +-- MemberInfoPage.xaml(.cs)            # Profile information
+|   +-- SelectInterestsPage.xaml(.cs)       # Interest selection
+|   +-- SelectInvolvementsPage.xaml(.cs)    # Involvement selection
+|   +-- SelectServiceRolesPage.xaml(.cs)    # Service role selection
+|
++-- ViewModels/
+|   +-- LoginViewModel.cs                   # Login logic
+|   +-- MemberInfoViewModel.cs              # Profile logic
+|   +-- SelectionViewModels.cs              # Interests/Involvements/ServiceRoles logic
+|
++-- Services/
+|   +-- MemberApiService.cs                 # API communication
+|   +-- AuthenticationService.cs            # Authentication & token management
+|
++-- Models/
+|   +-- Dtos.cs                             # Data transfer objects
+|
++-- StewardshipSurvey.Maui.csproj           # Project configuration
 ```
 
 ## Getting Started
@@ -357,21 +357,21 @@ dotnet publish -f net8.0-windows10.0.19041.0 -c Release
 
 ## Security Considerations
 
-? **Token Storage**
+- **Token Storage**
 - Tokens stored in secure device storage
 - Not logged or exposed
 - Cleared on logout
 
-? **HTTPS**
+- **HTTPS**
 - Always use HTTPS in production
 - Implement certificate pinning for Android
 
-? **Input Validation**
+- **Input Validation**
 - Validate email format
 - Validate password requirements
 - Sanitize form inputs
 
-? **Error Messages**
+- **Error Messages**
 - Generic error messages to users
 - Detailed logging for developers
 

@@ -42,6 +42,21 @@
         </p>
     </section>
 
+@*
+    PLACEHOLDER - kept deliberately, not dead code. The "How / When / Why" scripture panels
+    below are planned content for the home page, and Razor comments never reach the browser.
+
+    Restoring it is not a matter of removing the comment markers. The block is malformed: it
+    opens three comments and closes one, and the "How" section has a stray closing tag where
+    its paragraph should end. Only the "Why" panel has intact markup, so this needs rewriting
+    rather than un-commenting.
+
+    Razor comments nest, which is why three unmatched openings simply swallow everything to
+    the end of the file rather than leaking. The failure mode to watch for is the opposite: an
+    unmatched *closing* marker ends the comment early, and that is a build error (RZ1003), not
+    a silent leak - so this cannot break quietly. AnonymousAccessTests also asserts the
+    placeholder text stays off the rendered page.
+*@
     @*<div class="card shadow-sm mb-4" id="introBlock">
         <div class="row ">
             <section class="col-md-4" aria-labelledby="gettingStartedTitle">

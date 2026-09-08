@@ -6,8 +6,8 @@ can go straight to the code without re-deriving anything.
 Ticked items are kept rather than deleted: what was wrong and why it was wrong is the
 useful part, and several of these were found while fixing something else.
 
-State: `main`, 137 tests, 0 warnings, CI green. **Sections 1, 2 and 3 are clear except for
-API endpoint coverage, the cookie/antiforgery item and the MAUI client.**
+State: `main`, 138 tests, 0 warnings, CI green. **Sections 1, 2 and 4 are clear. Section 3
+has three items left, all newly found rather than original.**
 
 ---
 
@@ -267,54 +267,80 @@ API endpoint coverage, the cookie/antiforgery item and the MAUI client.**
 
 ## 4. Low — hygiene
 
-- [ ] **`Models/DbContext.cs`** — empty stub class that shadows
-  `Microsoft.EntityFrameworkCore.DbContext` for any file importing `StewardshipSurvey.Models`
-  without the EF namespace. Nothing uses it.
+- [x] ~~**`Models/DbContext.cs`**~~ Deleted. Nothing referenced it. 26 of the 27 files that
+  import `StewardshipSurvey.Models` do not import EF Core, so the shadow was live for all of
+  them; none happened to type a bare `DbContext`, which is why it never bit.
 
-- [ ] **`MemberInfo.ApplicationUserID`** (`Models/MemberInfo.cs:58`) — required column that no
-  code ever assigns; always `''`. Looks like a foreign key and isn't. The real link is
-  `AspNetUsers.MemberID`, configured at `Data/ApplicationDbContext.cs:25-28`.
+- [x] ~~**`MemberInfo.ApplicationUserID`**~~ Removed, with a migration. Nothing ever assigned
+  it, so every row held the empty string. It was created by *renaming* `PhoneNumber` in
+  `20250914213506_MemberInfo` — which is how a column nobody wanted ended up with a name that
+  sounded load-bearing.
+  `AuthHardeningTests` used it as an overposting target; that assertion now uses `UpdatedDate`,
+  which the page stamps itself and so serves the same purpose.
 
-- [ ] **Remove the scaffolding leftovers — but in this order.**
-  `Data/ApplicationUser.cs:2` imports
-  `Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.General`, and the
-  `Microsoft.VisualStudio.Web.CodeGeneration.Design` package (`.csproj:27`) is scaffolding-only.
-  **Trap:** `System.IdentityModel.Tokens.Jwt`, used by `AuthController`, currently arrives only
-  transitively through that package. Add it as an explicit `PackageReference` *first*, or the
-  build breaks in a way that looks unrelated.
+- [x] ~~**Remove the scaffolding leftovers.**~~ Done, and the trap was already defused: the
+  bearer-auth work in section 2 had to add explicit `System.IdentityModel.Tokens.Jwt` and
+  `Microsoft.IdentityModel.Tokens` references (7.1.2) for its own reasons, so by the time this
+  came round the package could be dropped safely. The unused
+  `Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.General` import went with it.
 
-- [ ] **Raw `new HttpClient()` registered as scoped.** `Program.cs:72-86`, two lines below the
-  `AddHttpClient("ApiClient")` that exists to prevent exactly that.
+- [x] ~~**Raw `new HttpClient()` registered as scoped.**~~ Both registrations deleted, not one.
+  The item flags the raw client and points at the named `AddHttpClient("ApiClient")` above it
+  as the correct alternative — but that one has no consumer either. Nothing in the application
+  injects `HttpClient` or `IHttpClientFactory`, and the MAUI client has its own. A comment
+  where they stood records that.
 
-- [ ] **Misleading `[Key]` attributes on join entities.** `Models/MemberInterest.cs:8-9` and
-  `Models/MemberInvolvement.cs:31-32` declare surrogate keys that the fluent `HasKey` overrides
-  (`ApplicationDbContext.cs:31-32,44-45`), leaving `MemberInterestID`/`MemberInvolvementID` as
-  always-zero columns. `Models/MemberServiceRole.cs` has the correct shape — the three are
-  inconsistent.
+- [x] ~~**Misleading `[Key]` attributes on join entities.**~~ Removed, and the dead columns
+  dropped with them in `20260908013332_DropUnusedMemberColumns`. All three join entities now
+  match `MemberServiceRole`, which always had the right shape.
+  Removing the attribute alone would have needed no migration — EF would simply have kept
+  mapping an ordinary always-zero column. Dropping the column is what needs one.
 
-- [ ] **`DeactivatedUserPurgeService.StartupDelay`** (`Services/DeactivatedUserPurgeService.cs:19`)
-  is a hardcoded minute with no clock abstraction; `DateTime.UtcNow` is called directly at
-  line 71 for the cutoff. This is why `PurgeAsync` had to be widened to `internal` for testing.
+- [x] ~~**`DeactivatedUserPurgeService.StartupDelay`**~~ Now `UserRetention:StartupDelayMinutes`,
+  beside the other retention settings.
+  `DateTime.UtcNow` stays, deliberately. The five purge tests call `PurgeAsync` directly and
+  set `DeactivatedDate` far in the past, so they never wait and never need a clock; a
+  `TimeProvider` seam would buy an exact-boundary test and nothing else. `PurgeAsync` therefore
+  stays `internal` and the skill note explaining why stays accurate.
 
-- [ ] **Test factory removes all hosted services.**
-  `StewardshipSurvey.Tests/Infrastructure/StewardshipWebApplicationFactory.cs:62-64` — the
-  comment names the purge sweep, the call removes every `IHostedService`.
+- [x] ~~**Test factory removes all hosted services.**~~ Now removes the one descriptor whose
+  implementation type is `DeactivatedUserPurgeService`, and asserts it found it — so a rename
+  or a move fails loudly instead of silently removing nothing. Exactly one hosted service is
+  registered today, so the blanket call was harmless; it would have stopped any service added
+  later from running under every integration test, and a background job that never runs in
+  tests fails quietly.
 
-- [ ] **The MAUI project is not in `StewardshipSurvey.sln`**, so API changes never break its
-  build. Deliberate for CI (Linux lacks the workloads) but surprising locally.
+- [x] ~~**The MAUI project is not in `StewardshipSurvey.sln`.**~~ Left as it is; this is not a
+  defect. CI runs on `ubuntu-latest`, which has no MAUI workloads, and `build.yml:19-20`
+  already says so. Adding it would break CI to remove a local surprise. Recorded here so the
+  next reader does not re-derive it — and noted in the MAUI README, which now states plainly
+  that nothing builds or tests that project automatically.
 
-- [ ] **`StewardshipSurvey.Maui/README.md`** has a mojibake directory tree — box-drawing
-  characters written in the wrong encoding, rendering as `?`.
+- [x] ~~**`StewardshipSurvey.Maui/README.md` mojibake.**~~ Fixed. The file was already pure
+  ASCII with no BOM: the box-drawing characters and check marks had been replaced by literal
+  `?` bytes at some earlier save, so nothing could be recovered by re-encoding — the originals
+  were gone.
+  Redrawn with `+--` and `|` rather than restoring the Unicode, so the same encoding round-trip
+  cannot break it again. The check-mark bullets became ordinary list items. Verified: the file
+  contains no non-ASCII bytes and the only remaining `?` is a nullable type in a code sample.
 
-- [ ] **`Pages/Index.cshtml:45-88`** — ~43 lines of commented-out "How / When / Why" scripture
-  sections. Verified they do **not** leak onto the rendered page. May be a deliberate
-  placeholder for planned content — ask before removing.
+- [x] ~~**`Pages/Index.cshtml` commented scripture sections.**~~ Kept and annotated, per your
+  call. The note records what a future reader needs: it is planned content, and it cannot
+  simply be uncommented — the block opens three comments and closes one, and the "How" section
+  has a stray closing tag.
+  Two things I had wrong while doing this, both now checked rather than assumed: Razor comments
+  **do** nest, which is why three unmatched openings swallow the block harmlessly; and an
+  unmatched *closing* marker is a build error (RZ1003), not a silent leak. So this cannot break
+  quietly.
+  `AnonymousAccessTests` gained a test that the placeholder text stays off the rendered page.
+  Teeth verified by uncommenting the block. Note it does **not** assert on `introBlock` — the
+  home page has a live element by that id, which is a trap I fell into first.
 
-- [ ] **`ApplicationDbContext.cs:17`** has a commented-out `DbSet<ServiceRoles>` while
-  `Models/ServiceRoles.cs` survives unmapped and unreferenced.
+- [x] ~~**Commented-out `DbSet<ServiceRoles>`.**~~ Both deleted, per your call to treat this
+  pair as dead rather than as a placeholder. `Models/ServiceRoles.cs` was commented out in its
+  entirety — every line, including the namespace — and nothing referenced the type.
 
-- [ ] **`AddRazorSupportForMvc=true`** (`.csproj:8`) is intended for class libraries shipping
-  Razor views, not a Web SDK project.
+- [x] ~~**`AddRazorSupportForMvc=true`**~~ Removed. Build clean, 0 warnings, all tests pass.
 
 ---
 

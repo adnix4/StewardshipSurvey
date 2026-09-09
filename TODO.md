@@ -6,9 +6,9 @@ can go straight to the code without re-deriving anything.
 Ticked items are kept rather than deleted: what was wrong and why it was wrong is the
 useful part, and several of these were found while fixing something else.
 
-State: `main`, 172 tests, 0 warnings, CI green. **Every item is closed** — the five sections
-this file was opened with, and everything found while working through them. The MAUI app now
-compiles for the first time; what is untested there is written down rather than implied.
+State: `main`, 172 tests, 0 warnings, CI green. Every item this file was opened with is closed.
+**Two remain**, both in the MAUI client and both found by checking the READMEs against the
+code rather than by running anything.
 
 ---
 
@@ -160,6 +160,27 @@ compiles for the first time; what is untested there is written down rather than 
 ---
 
 ## 3. Medium — correctness and coverage
+
+- [ ] **The MAUI client sends the wrong verb when saving a profile.**
+  `StewardshipSurvey.Maui/Services/MemberApiService.cs:294` builds a
+  `POST /api/members/current`; the server exposes that route as `PUT`
+  (`Controllers/Api/MembersController.cs:82`). The call gets a 405, so saving a profile from
+  the app cannot work. Found while reconciling the READMEs against the code.
+  The fix is one word, but it is a behaviour change and wants a test, so it is not being done
+  as part of a documentation pass.
+
+- [ ] **Two XAML converters are referenced and do not exist.**
+  `StewardshipSurvey.Maui/Pages/LoginPage.xaml` binds `StringToBoolConverter`, and
+  `Pages/MemberInfoPage.xaml` binds both that and `StringToValueConverter` for the
+  contact-preference radio buttons. Neither is defined in `Converters/ValueConverters.cs`, and
+  `App.xaml` registers only `StringNotEmptyConverter` and `InvertedBoolConverter`.
+  **This is why "it compiles" is not "it works."** An unresolved `StaticResource` is a runtime
+  failure in MAUI, not a build error, so the project genuinely builds clean and would still
+  throw on the login page - the first screen anyone sees. Worth remembering the next time a
+  clean build is offered as evidence about this project.
+  Writing the two converters is small; knowing whether the resulting bindings behave needs the
+  app actually run, which still needs a device or emulator.
+
 
 - [x] ~~**CSV Status column is dead.**~~ Fixed by removing the column. The report is an
   active-members report at every call site, so the value was computed after the filter that

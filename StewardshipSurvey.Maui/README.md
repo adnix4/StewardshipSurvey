@@ -14,8 +14,9 @@ describe what it was meant to be rather than what it is. What is actually true t
   Mac. Neither has been tried here, so "cross-platform" is a target list, not a tested claim.
 - **It has never been run.** There is no device or emulator in the loop, so no screen has been
   displayed and the survey flow has never been exercised end to end.
-- **Two known faults would stop it working**, both listed under Known problems below.
-  Compiling is not the same as working, and in this case it is a good way short of it.
+- **The two known faults are fixed** - the wrong HTTP verb on profile save, and two XAML
+  converters that were referenced and never written. Neither could be confirmed by building,
+  which is the point: compiling is not the same as working.
 
 The server side it depends on *is* tested - see
 `StewardshipSurvey.Tests/Integration/BearerAuthTests.cs` and `SurveyApiTests.cs`.
@@ -187,21 +188,24 @@ the call was removed rather than left pointing at nothing. To add a font, see
 
 ## Known problems
 
-Neither of these is a documentation gap. Both are real, and neither is fixed.
+None outstanding. The two that were here are fixed:
 
-1. **Saving a profile cannot work.** `Services/MemberApiService.cs:294` sends
-   `POST /api/members/current`. The server exposes `PUT` for that route
-   (`Controllers/Api/MembersController.cs:82`), so the call gets a 405.
+- **Saving a profile** sent `POST /api/members/current` where the server exposes `PUT`, so it
+  returned 405. The client now sends `PUT`, and the server side of that contract is pinned by
+  `StewardshipSurvey.Tests/Integration/MemberProfileApiTests.cs` - the endpoint previously had
+  no coverage at all, which is how the two sides drifted.
+- **Two converters were referenced and did not exist.** The error-visibility bindings now use
+  the `StringNotEmptyConverter` that was already there, and `StringToValueConverter` is written
+  and registered for the contact-preference radio buttons.
 
-2. **The login page would fail to load.** `Pages/LoginPage.xaml` and `Pages/MemberInfoPage.xaml`
-   bind `StringToBoolConverter` and `StringToValueConverter`. Neither exists in
-   `Converters/ValueConverters.cs` and neither is registered in `App.xaml`, which holds only
-   `StringNotEmptyConverter` and `InvertedBoolConverter`. An unresolved `StaticResource` is a
-   runtime failure in MAUI rather than a build error, which is exactly why this project builds
-   clean and would still fall over on the first screen. The contact-preference radio buttons on
-   the profile page depend on the second converter.
+An unresolved `StaticResource` is a runtime failure rather than a build error, so nothing about
+a clean build would have caught either. `StewardshipSurvey.Tests/Unit/MauiXamlResourceTests.cs`
+now checks every key in this project's XAML against `App.xaml` as plain text - no MAUI workload
+needed - so it runs on the Linux CI box that cannot build this project at all. It is the only
+automated check the client has.
 
-Both are tracked in the repository's [`TODO.md`](../TODO.md).
+**Still true:** none of this has been run. The fixes are reasoned and compile, and the survey
+flow has never been exercised on a device or emulator.
 
 ## Version Info
 

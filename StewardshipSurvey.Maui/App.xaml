@@ -8,6 +8,7 @@
         <ResourceDictionary>
             <converters:StringNotEmptyConverter x:Key="StringNotEmptyConverter" />
             <converters:InvertedBoolConverter x:Key="InvertedBoolConverter" />
+            <converters:StringToValueConverter x:Key="StringToValueConverter" />
 
             <Color x:Key="PageBackgroundColor">#FFFFFF</Color>
             <Color x:Key="PrimaryColor">#007AFF</Color>

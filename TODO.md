@@ -6,9 +6,9 @@ can go straight to the code without re-deriving anything.
 Ticked items are kept rather than deleted: what was wrong and why it was wrong is the
 useful part, and several of these were found while fixing something else.
 
-State: `main`, 172 tests, 0 warnings, CI green. Every item this file was opened with is closed.
-**Two remain**, both in the MAUI client and both found by checking the READMEs against the
-code rather than by running anything.
+State: `main`, 179 tests, 0 warnings, CI green. **Every item is closed**, including the two
+the README reconciliation turned up. The MAUI client now has one automated check of its own -
+the first thing about that project CI has ever been able to verify.
 
 ---
 
@@ -161,25 +161,37 @@ code rather than by running anything.
 
 ## 3. Medium — correctness and coverage
 
-- [ ] **The MAUI client sends the wrong verb when saving a profile.**
-  `StewardshipSurvey.Maui/Services/MemberApiService.cs:294` builds a
-  `POST /api/members/current`; the server exposes that route as `PUT`
-  (`Controllers/Api/MembersController.cs:82`). The call gets a 405, so saving a profile from
-  the app cannot work. Found while reconciling the READMEs against the code.
-  The fix is one word, but it is a behaviour change and wants a test, so it is not being done
-  as part of a documentation pass.
+- [x] ~~**The MAUI client sends the wrong verb when saving a profile.**~~ Fixed - the client
+  sends `PUT`.
+  The interesting part was not the one-word change. `PUT /api/members/current` had **no test at
+  all**: every other test against that route used `GET`, so the endpoint the client depends on
+  to save anything was unexercised on both sides. That is how the two drifted apart and stayed
+  that way.
+  `Integration/MemberProfileApiTests.cs` now pins the contract - 5 tests covering the save, the
+  read-back the client performs afterwards, an anonymous caller, that one member cannot write
+  another's profile, and explicitly that `POST` on that route is a 405, which is the exact shape
+  of the bug. Teeth verified by flipping the server route back to `POST`: 4 of the 5 go red.
 
-- [ ] **Two XAML converters are referenced and do not exist.**
-  `StewardshipSurvey.Maui/Pages/LoginPage.xaml` binds `StringToBoolConverter`, and
-  `Pages/MemberInfoPage.xaml` binds both that and `StringToValueConverter` for the
-  contact-preference radio buttons. Neither is defined in `Converters/ValueConverters.cs`, and
-  `App.xaml` registers only `StringNotEmptyConverter` and `InvertedBoolConverter`.
-  **This is why "it compiles" is not "it works."** An unresolved `StaticResource` is a runtime
-  failure in MAUI, not a build error, so the project genuinely builds clean and would still
-  throw on the login page - the first screen anyone sees. Worth remembering the next time a
-  clean build is offered as evidence about this project.
-  Writing the two converters is small; knowing whether the resulting bindings behave needs the
-  app actually run, which still needs a device or emulator.
+- [x] ~~**Two XAML converters are referenced and do not exist.**~~ Fixed, and guarded.
+  `StringToBoolConverter` was only ever asked to do what `StringNotEmptyConverter` already
+  does - show an error label when the message is non-empty - so those two bindings point at the
+  existing converter rather than gaining a second name for one behaviour.
+  `StringToValueConverter` is real work and is now written: it checks a radio button when the
+  bound string equals the button's `ConverterParameter`. `ConvertBack` returns
+  `Binding.DoNothing` on the false case on purpose - within a radio group the newly selected
+  button reports true immediately after the previous reports false, and acting on that false
+  would blank the property and then reset it, or lose the answer outright if the group were
+  ever cleared.
+  **The guard matters more than the fix.** An unresolved `StaticResource` is a runtime failure
+  in MAUI rather than a build error, so nothing about a clean build would catch this - and it
+  is the reason "it compiles" was a weaker statement than it sounded when I said it.
+  `Unit/MauiXamlResourceTests.cs` reads the client's XAML as plain text and checks every key
+  against `App.xaml`, so it needs no MAUI workload and runs on the Linux CI box that cannot
+  build that project at all. It is the only automated check the MAUI client has. A second test
+  pins the file list so a restructure cannot turn it into a no-op that passes forever. Teeth
+  verified by unregistering the converter again: it goes red and names the file and the key.
+  **Honest limit unchanged:** none of this has been run. Whether the bindings behave correctly
+  on a screen still needs a device or emulator.
 
 
 - [x] ~~**CSV Status column is dead.**~~ Fixed by removing the column. The report is an

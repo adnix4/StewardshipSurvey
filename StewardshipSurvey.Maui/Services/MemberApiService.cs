@@ -291,7 +291,9 @@ public class MemberApiService
             var json = JsonSerializer.Serialize(member);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var request = new HttpRequestMessage(HttpMethod.Post, "/api/members/current")
+            // PUT, not POST. The server exposes this route as PUT only, so the POST this
+            // used to send came back 405 and saving a profile could never have worked.
+            var request = new HttpRequestMessage(HttpMethod.Put, "/api/members/current")
             {
                 Content = content
             };
